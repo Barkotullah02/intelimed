@@ -1,13 +1,12 @@
-package com.opu.springrestapi;
+package com.intellimeds;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SpringRestApiApplicationTests {
+class IntelliMedsApplicationTests {
 
     @Test
     void contextLoads() {
     }
-
 }

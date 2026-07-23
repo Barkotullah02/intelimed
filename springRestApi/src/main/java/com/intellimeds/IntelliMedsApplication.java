@@ -1,13 +1,12 @@
-package com.opu.springrestapi;
+package com.intellimeds;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SpringRestApiApplication {
+public class IntelliMedsApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SpringRestApiApplication.class, args);
+        SpringApplication.run(IntelliMedsApplication.class, args);
     }
-
 }
