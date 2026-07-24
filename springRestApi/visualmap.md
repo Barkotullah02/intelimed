@@ -1,4 +1,4 @@
-# Visual Map - Intelimed Project
+# Visual Map - IntelliMeds Project
 
 ## System Architecture
 
@@ -19,226 +19,167 @@
 │  │   Chain     │  │   Check     │  │  Controllers│  │  Validation │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘        │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                           CONTROLLER LAYER (14)                             │
+│                        CONTROLLER LAYER (16 controllers)                     │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
-│  │   Drug   │ │  Doctor  │ │Consultat.│ │Prescript.│ │DrugCat.  │         │
+│  │  Auth    │ │ Profile  │ │  Drug    │ │  Interac │ │   AI     │         │
 │  │Controller│ │Controller│ │Controller│ │Controller│ │Controller│         │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘         │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
-│  │DrugInter.│ │Manufac.  │ │Patient   │ │Medication│ │Favorite  │         │
-│  │Controller│ │Controller│ │Allergy   │ │Reminder  │ │Controller│         │
+│  │ Chatbot  │ │Reminder  │ │Medication│ │ Doctor   │ │Appointment│         │
+│  │Controller│ │Controller│ │History   │ │Controller│ │Controller│         │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐                                   │
-│  │Notif.    │ │Search    │ │AI Chat   │ │AI Recommend.                    │
-│  │Controller│ │History   │ │Controller│ │Controller                       │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────────                  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
+│  │Education │ │Notif.    │ │ Admin    │ │ Admin    │ │Download/ │         │
+│  │Controller│ │Controller│ │Controller│ │DrugCtrl  │ │Share     │         │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘         │
+│  ┌──────────┐                                                           │
+│  │ Search   │                                                           │
+│  │Controller│                                                           │
+│  └──────────┘                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                           REPOSITORY LAYER (23)                             │
+│                         SERVICE LAYER (16 services)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        REPOSITORY LAYER (16 repositories)                    │
 │                    Spring Data JPA Repositories                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                           DATABASE (PostgreSQL)                             │
-│                              Supabase Cloud                                 │
+│                         DATABASE (PostgreSQL 17.6)                           │
+│                           Supabase Cloud                                    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Package Structure
+## Package Structure (com.intellimeds)
 
 ```
-com.opu.springrestapi/
+com.intellimeds/
 │
-├── 📁 config/
-│   └── SecurityConfig.java              # Security configuration
+├── IntelliMedsApplication.java            # Main entry point
 │
-├── 📁 controller/                        # REST API endpoints
-│   ├── AiChatHistoryController.java     # /api/ai/chat
-│   ├── AiRecommendationController.java  # /api/ai/recommendations
-│   ├── ConsultationController.java      # /api/consultations
-│   ├── DoctorController.java           # /api/doctors
-│   ├── DrugCategoryController.java     # /api/drug-categories
-│   ├── DrugController.java             # /api/drugs
-│   ├── DrugInteractionController.java  # /api/drug-interactions
-│   ├── FavoriteController.java         # /api/favorites
-│   ├── ManufacturerController.java     # /api/manufacturers
-│   ├── MedicationReminderController.java # /api/reminders
-│   ├── NotificationController.java     # /api/notifications
-│   ├── PatientAllergyController.java   # /api/allergies
-│   ├── PrescriptionController.java     # /api/prescriptions
-│   └── SearchHistoryController.java    # /api/search-history
+├── 📁 auth/                               # Module 1: Authentication
+│   ├── AuthController.java                # /api/auth/*
+│   ├── AuthService.java                   # JWT + registration
+│   ├── dto/
+│   │   ├── AuthRequest.java
+│   │   ├── AuthResponse.java
+│   │   └── RefreshTokenRequest.java
+│   └── model/
+│       └── RefreshToken.java
 │
-├── 📁 dto/                              # Data Transfer Objects
-│   ├── ApiResponse.java                 # Standard API response wrapper
-│   └── DrugResponse.java               # Drug response DTO
+├── 📁 user/                               # Module 2: Profile
+│   ├── ProfileController.java             # /api/users/profile
+│   └── ProfileService.java
 │
-├── 📁 exception/                        # Exception handling
-│   ├── GlobalExceptionHandler.java      # @RestControllerAdvice
-│   └── ResourceNotFoundException.java   # Custom 404 exception
+├── 📁 drug/                               # Modules 3, 18, 19: Drug + Search + Download
+│   ├── DrugController.java                # /api/drugs
+│   ├── SearchController.java              # /api/search/suggestions
+│   ├── DownloadShareController.java       # /api/download/*
+│   ├── DrugService.java
+│   └── dto/
+│       ├── DrugRequest.java
+│       └── DrugResponse.java
 │
-├── 📁 model/                            # JPA Entities (23)
-│   ├── AiChatHistory.java              # AI chat conversations
-│   ├── AiRecommendation.java           # AI recommendations
-│   ├── AlternativeMedicine.java        # Alternative medicines
-│   ├── ApiProvider.java                # External API configs
-│   ├── AuditLog.java                   # System audit logs
-│   ├── Consultation.java               # Patient-doctor meetings
-│   ├── Doctor.java                     # Doctor profiles
-│   ├── Drug.java                       # Drug catalog
-│   ├── DrugAlias.java                  # Alternative drug names
-│   ├── DrugCategory.java               # Drug classifications
-│   ├── DrugCategoryMap.java            # Drug-category links
-│   ├── DrugInteraction.java            # Drug-drug interactions
-│   ├── Favorite.java                   # User favorites
-│   ├── Manufacturer.java               # Drug manufacturers
-│   ├── MedicationReminder.java         # Medication reminders
-│   ├── Notification.java               # User notifications
-│   ├── PatientAllergy.java             # Patient allergies
-│   ├── Prescription.java               # Medical prescriptions
-│   ├── PrescriptionDrug.java           # Drugs in prescriptions
-│   ├── Profile.java                    # User profiles
-│   ├── Role.java                       # User roles
-│   ├── SearchHistory.java              # Search history
-│   └── UserRole.java                   # User-role assignments
+├── 📁 interaction/                        # Module 4: Drug Interactions
+│   ├── InteractionController.java         # /api/interactions/*
+│   └── InteractionService.java
 │
-├── 📁 repository/                       # Data access (23)
-│   ├── AiChatHistoryRepository.java
-│   ├── AiRecommendationRepository.java
-│   ├── AlternativeMedicineRepository.java
-│   ├── ApiProviderRepository.java
-│   ├── AuditLogRepository.java
-│   ├── ConsultationRepository.java
-│   ├── DoctorRepository.java
-│   ├── DrugAliasRepository.java
-│   ├── DrugCategoryMapRepository.java
-│   ├── DrugCategoryRepository.java
-│   ├── DrugInteractionRepository.java
-│   ├── DrugRepository.java
-│   ├── FavoriteRepository.java
-│   ├── ManufacturerRepository.java
-│   ├── MedicationReminderRepository.java
-│   ├── NotificationRepository.java
-│   ├── PatientAllergyRepository.java
-│   ├── PrescriptionDrugRepository.java
-│   ├── PrescriptionRepository.java
-│   ├── ProfileRepository.java
-│   ├── RoleRepository.java
-│   ├── SearchHistoryRepository.java
-│   └── UserRoleRepository.java
+├── 📁 ai/                                 # Modules 5, 6, 8: AI
+│   ├── AiController.java                  # /api/ai/*
+│   ├── AiService.java
+│   ├── AiProviderService.java
+│   ├── AiHistoryService.java
+│   ├── dto/
+│   │   ├── AiExplainRequest.java
+│   │   ├── AiExplainResponse.java
+│   │   ├── AiProviderResponse.java
+│   │   └── AiHistoryResponse.java
+│   └── model/
+│       ├── AiProvider.java
+│       └── AiHistory.java
 │
-├── 📁 service/
-│   └── 📁 impl/                         # (Empty - pending implementation)
+├── 📁 chatbot/                            # Module 7: AI Chatbot
+│   ├── ChatbotController.java             # /api/chat
+│   └── ChatbotService.java
 │
-└── SpringRestApiApplication.java        # Main entry point
-```
-
-## Entity Relationship Diagram
-
-```
-┌─────────────────┐         ┌─────────────────┐
-│     Profile     │         │      Role       │
-├─────────────────┤         ├─────────────────┤
-│ id (UUID) PK    │         │ id (UUID) PK    │
-│ full_name       │         │ role_name       │
-│ age             │         └────────┬────────┘
-│ gender          │                  │
-│ created_at      │         ┌────────┴────────┐
-└────────┬────────┘         │    UserRole     │
-         │                  ├─────────────────┤
-         │                  │ id (UUID) PK    │
-         │                  │ user_id FK      │
-         │                  │ role_id FK      │
-         │                  └─────────────────┘
-         │
-         ├────────────────────────────────────────────────────────────┐
-         │                            │                               │
-         ▼                            ▼                               ▼
-┌─────────────────┐         ┌─────────────────┐           ┌─────────────────┐
-│     Doctor      │         │ Consultation    │           │   Prescription  │
-├─────────────────┤         ├─────────────────┤           ├─────────────────┤
-│ id (UUID) PK    │◄────────│ doctor_id FK    │           │ id (UUID) PK    │
-│ user_id FK      │         │ patient_id FK   │◄──────────│ patient_id FK   │
-│ specialization  │         │ appointment_time│           │ diagnosis       │
-│ license_number  │         │ status          │           │ notes           │
-│ hospital        │         │ notes           │           │ created_at      │
-│ verified        │         │ created_at      │           └────────┬────────┘
-│ created_at      │         └─────────────────┘                    │
-└─────────────────┘                                                │
-                                                                   ▼
-┌─────────────────┐         ┌─────────────────┐           ┌─────────────────┐
-│      Drug       │         │  DrugCategory   │           │PrescriptionDrug │
-├─────────────────┤         ├─────────────────┤           ├─────────────────┤
-│ id (UUID) PK    │         │ id (UUID) PK    │           │ id (UUID) PK    │
-│ drug_name       │         │ category_name   │           │ prescription_id │
-│ generic_name    │         └────────┬────────┘           │ drug_id FK      │
-│ brand_name      │                  │                    │ dosage          │
-│ description     │         ┌────────┴────────┐           │ frequency       │
-│ drug_class      │         │DrugCategoryMap  │           │ duration        │
-│ dosage_form     │         ├─────────────────┤           └─────────────────┘
-│ strength        │         │ id (UUID) PK    │
-│ route           │         │ drug_id FK      │
-│ pregnancy_cat   │         │ category_id FK  │
-│ contraindications│        └─────────────────┘
-│ side_effects    │
-│ warnings        │         ┌─────────────────┐
-│ storage         │         │DrugInteraction  │
-│ manufacturer_id │──┐      ├─────────────────┤
-│ created_at      │  │      │ id (UUID) PK    │
-└─────────────────┘  │      │ drug_a_id FK    │
-         │           │      │ drug_b_id FK    │
-         │           │      │ severity        │
-         │           │      │ description     │
-         │           │      │ created_at      │
-         │           │      └─────────────────┘
-         │           │
-         │           ▼
-         │  ┌─────────────────┐
-         │  │  Manufacturer   │
-         │  ├─────────────────┤
-         └─►│ id (UUID) PK    │
-            │ name            │
-            │ country         │
-            │ website         │
-            └─────────────────┘
-
-┌─────────────────┐         ┌─────────────────┐
-│ PatientAllergy  │         │MedicationReminder│
-├─────────────────┤         ├─────────────────┤
-│ id (UUID) PK    │         │ id (UUID) PK    │
-│ patient_id FK   │         │ patient_id FK   │
-│ drug_id FK      │         │ drug_id FK      │
-│ severity        │         │ dosage          │
-│ reaction        │         │ frequency       │
-│ created_at      │         │ reminder_time   │
-└─────────────────┘         │ active          │
-                            │ created_at      │
-┌─────────────────┐         └─────────────────┘
-│    Favorite     │
-├─────────────────┤         ┌─────────────────┐
-│ id (UUID) PK    │         │  Notification   │
-│ user_id FK      │         ├─────────────────┤
-│ item_type       │         │ id (UUID) PK    │
-│ item_id         │         │ user_id FK      │
-│ created_at      │         │ title           │
-└─────────────────┘         │ message         │
-                            │ read            │
-┌─────────────────┐         │ created_at      │
-│  SearchHistory  │         └─────────────────┘
-├─────────────────┤
-│ id (UUID) PK    │         ┌─────────────────┐
-│ user_id FK      │         │ AiChatHistory   │
-│ query           │         ├─────────────────┤
-│ created_at      │         │ id (UUID) PK    │
-└─────────────────┘         │ user_id FK      │
-                            │ message_role    │
-┌─────────────────┐         │ message_content │
-│AiRecommendation │         │ created_at      │
-├─────────────────┤         └─────────────────┘
-│ id (UUID) PK    │
-│ user_id FK      │
-│ recommendation_ │
-│   type          │
-│ content         │
-│ context_data    │
-│ created_at      │
-└─────────────────┘
+├── 📁 reminder/                           # Module 9: Medication Reminders
+│   ├── ReminderController.java            # /api/reminders
+│   └── ReminderService.java
+│
+├── 📁 medication/                         # Module 10: Medication History
+│   ├── MedicationHistoryController.java   # /api/medications/history
+│   └── MedicationHistoryService.java
+│
+├── 📁 doctor/                             # Module 11: Doctor
+│   ├── DoctorController.java              # /api/doctors
+│   └── DoctorService.java
+│
+├── 📁 appointment/                        # Module 12: Appointment
+│   ├── AppointmentController.java         # /api/appointments
+│   └── AppointmentService.java
+│
+├── 📁 education/                          # Module 13: Patient Education
+│   ├── EducationController.java           # /api/education
+│   └── EducationService.java
+│
+├── 📁 notification/                       # Module 14: Notifications
+│   ├── NotificationController.java        # /api/notifications
+│   └── NotificationService.java
+│
+├── 📁 admin/                              # Modules 15, 16, 17: Admin
+│   ├── AdminController.java               # /api/admin/users/*
+│   ├── AdminDrugController.java           # /api/admin/drugs/*
+│   ├── AdminService.java
+│   └── dto/
+│       ├── AdminUserResponse.java
+│       └── DashboardStatsResponse.java
+│
+├── 📁 config/                             # Configuration
+│   ├── SecurityConfig.java                # JWT security chain
+│   ├── DataInitializer.java               # Seeds roles + AI providers
+│   └── WebConfig.java                     # CORS config
+│
+├── 📁 security/                           # Security components
+│   ├── JwtUtil.java                       # JWT token gen/validate
+│   ├── JwtAuthenticationFilter.java       # OncePerRequestFilter
+│   └── CustomUserDetailsService.java      # Loads User by email
+│
+├── 📁 exception/                          # Exception handling
+│   ├── GlobalExceptionHandler.java        # @RestControllerAdvice
+│   └── ErrorResponse.java                 # Error DTO
+│
+├── 📁 dto/                                # Common DTOs
+│   └── ApiResponse.java                   # { success, message, data }
+│
+├── 📁 model/                              # Core entities
+│   ├── User.java
+│   ├── Profile.java
+│   ├── Role.java
+│   ├── Drug.java
+│   ├── AlternativeMedicine.java
+│   ├── DrugInteraction.java
+│   ├── InteractionHistory.java
+│   ├── MedicationReminder.java
+│   ├── MedicationHistory.java
+│   ├── Doctor.java
+│   ├── Appointment.java
+│   ├── EducationContent.java
+│   └── Notification.java
+│
+└── 📁 repository/                         # Data access
+    ├── UserRepository.java
+    ├── RoleRepository.java
+    ├── ProfileRepository.java
+    ├── DrugRepository.java
+    ├── AlternativeMedicineRepository.java
+    ├── DrugInteractionRepository.java
+    ├── InteractionHistoryRepository.java
+    ├── AiProviderRepository.java
+    ├── AiHistoryRepository.java
+    ├── ChatHistoryRepository.java
+    ├── MedicationReminderRepository.java
+    ├── MedicationHistoryRepository.java
+    ├── DoctorRepository.java
+    ├── AppointmentRepository.java
+    ├── EducationContentRepository.java
+    └── NotificationRepository.java
 ```
 
 ## API Endpoint Map
@@ -252,105 +193,114 @@ com.opu.springrestapi/
 │  │  GET /actuator/health                                                │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
+│  ┌─── AUTH ─────────────────────────────────────────────────────────────┐  │
+│  │  POST   /api/auth/register              Register new user            │  │
+│  │  POST   /api/auth/login                 Login, get tokens            │  │
+│  │  POST   /api/auth/refresh-token         Refresh access token         │  │
+│  │  GET    /api/auth/me                    Get current user             │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── PROFILE ──────────────────────────────────────────────────────────┐  │
+│  │  GET    /api/users/profile               Get own profile             │  │
+│  │  PUT    /api/users/profile               Update profile (full)       │  │
+│  │  PATCH  /api/users/profile               Partial update profile      │  │
+│  │  DELETE /api/users/profile               Delete profile              │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
 │  ┌─── DRUGS ────────────────────────────────────────────────────────────┐  │
-│  │  GET    /api/drugs                    List all drugs                 │  │
-│  │  GET    /api/drugs/{id}               Get drug by ID                 │  │
-│  │  GET    /api/drugs/search?q=          Search drugs                   │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌─── DOCTORS ──────────────────────────────────────────────────────────┐  │
-│  │  GET    /api/doctors                  List all doctors               │  │
-│  │  GET    /api/doctors/{id}             Get doctor by ID               │  │
-│  │  GET    /api/doctors/verified         Get verified doctors           │  │
-│  │  GET    /api/doctors/search?spec=     Search by specialization       │  │
-│  │  POST   /api/doctors                  Create doctor                  │  │
-│  │  PUT    /api/doctors/{id}             Update doctor                  │  │
-│  │  DELETE /api/doctors/{id}             Delete doctor                  │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌─── CONSULTATIONS ────────────────────────────────────────────────────┐  │
-│  │  GET    /api/consultations            List all                       │  │
-│  │  GET    /api/consultations/{id}       Get by ID                      │  │
-│  │  GET    /api/consultations/patient/{id} Get by patient               │  │
-│  │  GET    /api/consultations/doctor/{id}  Get by doctor                │  │
-│  │  GET    /api/consultations/status/{s}   Get by status                │  │
-│  │  POST   /api/consultations            Create                         │  │
-│  │  PUT    /api/consultations/{id}       Update                         │  │
-│  │  DELETE /api/consultations/{id}       Delete                         │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌─── PRESCRIPTIONS ────────────────────────────────────────────────────┐  │
-│  │  GET    /api/prescriptions            List all                       │  │
-│  │  GET    /api/prescriptions/{id}       Get by ID                      │  │
-│  │  GET    /api/prescriptions/patient/{id} Get by patient               │  │
-│  │  GET    /api/prescriptions/{id}/drugs  Get prescription drugs        │  │
-│  │  POST   /api/prescriptions            Create                         │  │
-│  │  PUT    /api/prescriptions/{id}       Update                         │  │
-│  │  DELETE /api/prescriptions/{id}       Delete                         │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌─── DRUG CATEGORIES ──────────────────────────────────────────────────┐  │
-│  │  GET    /api/drug-categories          List all                       │  │
-│  │  GET    /api/drug-categories/{id}     Get by ID                      │  │
-│  │  POST   /api/drug-categories          Create                         │  │
-│  │  PUT    /api/drug-categories/{id}     Update                         │  │
-│  │  DELETE /api/drug-categories/{id}     Delete                         │  │
+│  │  GET    /api/drugs                       List all drugs              │  │
+│  │  GET    /api/drugs/{id}                  Get drug by ID              │  │
+│  │  GET    /api/drugs/search?keyword=       Search drugs                │  │
+│  │  GET    /api/drugs/suggestions?keyword=  Autocomplete suggestions    │  │
+│  │  GET    /api/drugs/{id}/alternatives     Get alternatives            │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌─── DRUG INTERACTIONS ────────────────────────────────────────────────┐  │
-│  │  GET    /api/drug-interactions        List all                       │  │
-│  │  GET    /api/drug-interactions/{id}   Get by ID                      │  │
-│  │  GET    /api/drug-interactions/drug/{id} Get by drug                 │  │
-│  │  POST   /api/drug-interactions        Create                         │  │
-│  │  DELETE /api/drug-interactions/{id}   Delete                         │  │
+│  │  POST   /api/interactions/check          Check drug interactions     │  │
+│  │  GET    /api/interactions/history        Get check history           │  │
+│  │  GET    /api/interactions/{id}           Get interaction by ID       │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  ┌─── MANUFACTURERS ────────────────────────────────────────────────────┐  │
-│  │  GET    /api/manufacturers            List all                       │  │
-│  │  GET    /api/manufacturers/{id}       Get by ID                      │  │
-│  │  POST   /api/manufacturers            Create                         │  │
-│  │  PUT    /api/manufacturers/{id}       Update                         │  │
-│  │  DELETE /api/manufacturers/{id}       Delete                         │  │
+│  ┌─── AI ───────────────────────────────────────────────────────────────┐  │
+│  │  POST   /api/ai/explain                  Get AI explanation          │  │
+│  │  GET    /api/ai/providers                List AI providers           │  │
+│  │  PUT    /api/ai/provider                 Switch active provider      │  │
+│  │  GET    /api/ai/history                  Get AI history              │  │
+│  │  DELETE /api/ai/history/{id}             Delete AI history entry     │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  ┌─── PATIENT ALLERGIES ────────────────────────────────────────────────┐  │
-│  │  GET    /api/allergies/patient/{id}   Get by patient                 │  │
-│  │  POST   /api/allergies                Add allergy                    │  │
-│  │  DELETE /api/allergies/{id}           Remove allergy                 │  │
+│  ┌─── CHATBOT ──────────────────────────────────────────────────────────┐  │
+│  │  POST   /api/chat                        Send message                │  │
+│  │  GET    /api/chat/history                Get chat history            │  │
+│  │  DELETE /api/chat/history                Clear chat history          │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌─── MEDICATION REMINDERS ─────────────────────────────────────────────┐  │
-│  │  GET    /api/reminders/patient/{id}   Get by patient                 │  │
-│  │  GET    /api/reminders/patient/{id}/active Get active reminders      │  │
-│  │  POST   /api/reminders                Create                         │  │
-│  │  PUT    /api/reminders/{id}           Update                         │  │
-│  │  DELETE /api/reminders/{id}           Delete                         │  │
+│  │  POST   /api/reminders                   Create reminder             │  │
+│  │  GET    /api/reminders                   List reminders              │  │
+│  │  GET    /api/reminders/{id}              Get reminder by ID          │  │
+│  │  PUT    /api/reminders/{id}              Update reminder             │  │
+│  │  DELETE /api/reminders/{id}              Delete reminder             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  ┌─── FAVORITES ────────────────────────────────────────────────────────┐  │
-│  │  GET    /api/favorites/user/{id}      Get user favorites             │  │
-│  │  POST   /api/favorites                Add favorite                   │  │
-│  │  DELETE /api/favorites/{id}           Remove favorite                │  │
+│  ┌─── MEDICATION HISTORY ───────────────────────────────────────────────┐  │
+│  │  GET    /api/medications/history         Get medication history      │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── DOCTORS ──────────────────────────────────────────────────────────┐  │
+│  │  GET    /api/doctors                     List all doctors            │  │
+│  │  GET    /api/doctors/{id}                Get doctor by ID            │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── APPOINTMENTS ─────────────────────────────────────────────────────┐  │
+│  │  POST   /api/appointments                Create appointment          │  │
+│  │  GET    /api/appointments                List appointments           │  │
+│  │  GET    /api/appointments/{id}           Get appointment by ID       │  │
+│  │  PUT    /api/appointments/{id}           Update appointment          │  │
+│  │  DELETE /api/appointments/{id}           Cancel appointment          │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── EDUCATION ────────────────────────────────────────────────────────┐  │
+│  │  POST   /api/education                   Create content              │  │
+│  │  GET    /api/education                   List content                │  │
+│  │  GET    /api/education/{id}              Get content by ID           │  │
+│  │  PUT    /api/education/{id}              Update content              │  │
+│  │  DELETE /api/education/{id}              Delete content              │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  ┌─── NOTIFICATIONS ────────────────────────────────────────────────────┐  │
-│  │  GET    /api/notifications/user/{id}  Get all notifications          │  │
-│  │  GET    /api/notifications/user/{id}/unread Get unread               │  │
-│  │  PUT    /api/notifications/{id}/read  Mark as read                   │  │
-│  │  DELETE /api/notifications/{id}       Delete notification            │  │
+│  │  GET    /api/notifications               List notifications          │  │
+│  │  PUT    /api/notifications/{id}/read     Mark as read                │  │
+│  │  DELETE /api/notifications/{id}          Delete notification         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  ┌─── SEARCH HISTORY ───────────────────────────────────────────────────┐  │
-│  │  GET    /api/search-history/user/{id} Get user search history        │  │
-│  │  POST   /api/search-history           Record search                  │  │
-│  │  DELETE /api/search-history/{id}      Delete search record           │  │
+│  ┌─── SEARCH SUGGESTIONS ───────────────────────────────────────────────┐  │
+│  │  GET    /api/search/suggestions?keyword= Get suggestions             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  ┌─── AI FEATURES ──────────────────────────────────────────────────────┐  │
-│  │  GET    /api/ai/chat/user/{id}        Get chat history               │  │
-│  │  POST   /api/ai/chat                  Save chat message              │  │
-│  │  GET    /api/ai/recommendations/user/{id} Get recommendations        │  │
-│  │  POST   /api/ai/recommendations       Create recommendation          │  │
+│  ┌─── DOWNLOAD & SHARE ─────────────────────────────────────────────────┐  │
+│  │  GET    /api/download/drug/{id}          Download drug info          │  │
+│  │  POST   /api/download/drug/{id}/share    Generate share link         │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── ADMIN: USER MANAGEMENT ───────────────────────────────────────────┐  │
+│  │  GET    /api/admin/users                 List all users              │  │
+│  │  GET    /api/admin/users/{id}            Get user by ID              │  │
+│  │  PUT    /api/admin/users/{id}            Update user                 │  │
+│  │  PATCH  /api/admin/users/{id}/status     Toggle active/locked        │  │
+│  │  DELETE /api/admin/users/{id}            Delete user                 │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── ADMIN: DRUG MANAGEMENT ───────────────────────────────────────────┐  │
+│  │  POST   /api/admin/drugs                 Create drug                 │  │
+│  │  GET    /api/admin/drugs                 List all drugs (admin)      │  │
+│  │  GET    /api/admin/drugs/{id}            Get drug by ID (admin)      │  │
+│  │  PUT    /api/admin/drugs/{id}            Update drug                 │  │
+│  │  DELETE /api/admin/drugs/{id}            Delete drug                 │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─── ADMIN: REPORTS ───────────────────────────────────────────────────┐  │
+│  │  GET    /api/admin/reports/dashboard     Dashboard stats             │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -363,15 +313,26 @@ com.opu.springrestapi/
 │                           REQUEST FLOW                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-    Client Request
+    Client Request (JSON + JWT Bearer Token)
+         │
+         ▼
+┌─────────────────┐
+│   CORS Filter   │  ──► WebConfig (allow all origins)
+└────────┬────────┘
          │
          ▼
 ┌─────────────────┐
 │   Spring        │
-│   Security      │  ──► SecurityFilterChain (CSRF disabled, STATELESS)
-│   Filter Chain  │
+│   Security      │  ──► SecurityFilterChain
+│   Filter Chain  │      CSRF disabled, STATELESS session
 └────────┬────────┘
          │
+         ▼
+┌─────────────────┐
+│  JwtAuth Filter │  ──► JwtAuthenticationFilter
+│  (OncePerReq)   │      Extracts token from Authorization header
+└────────┬────────┘      Validates with JwtUtil
+         │               Sets SecurityContext
          ▼
 ┌─────────────────┐
 │   Dispatcher    │
@@ -388,6 +349,12 @@ com.opu.springrestapi/
 ┌─────────────────┐
 │   Request Body  │  ──► @RequestBody (JSON to Object)
 │   Validation    │      @Valid (Bean Validation)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Service       │  ──► Business logic
+│   Layer         │      @Transactional
 └────────┬────────┘
          │
          ▼
@@ -412,34 +379,220 @@ com.opu.springrestapi/
     Client Response (JSON)
 ```
 
-## Response Format
+## Entity Relationship Diagram
+
+```
+┌─────────────────┐         ┌─────────────────┐
+│      Role       │         │      User       │
+├─────────────────┤         ├─────────────────┤
+│ id (UUID) PK    │◄────┐   │ id (UUID) PK    │
+│ name (enum)     │     │   │ name            │
+│                 │     │   │ email (unique)  │
+└─────────────────┘     │   │ password        │
+                        │   │ isActive        │
+┌─────────────────┐     │   │ isLocked        │
+│   UserRole      │     │   │ createdAt       │
+├─────────────────┤     │   └────────┬────────┘
+│ id (UUID) PK    │     │            │
+│ user_id FK ─────│─────┘            │ 1:1
+│ role_id FK ─────│──────┐           │
+└─────────────────┘      │           ▼
+                         │   ┌─────────────────┐
+                         │   │     Profile     │
+                         │   ├─────────────────┤
+                         │   │ id (UUID) PK    │
+                         │   │ user_id FK      │
+                         │   │ fullName        │
+                         │   │ dateOfBirth     │
+                         │   │ gender          │
+                         │   │ phone           │
+                         │   │ address         │
+                         │   │ profileImage    │
+                         │   │ weight, height  │
+                         │   │ bloodGroup      │
+                         │   │ allergies       │
+                         │   │ chronicDiseases │
+                         │   │ emergencyContact│
+                         │   │ specialization  │
+                         │   │ licenseNumber   │
+                         │   │ hospital        │
+                         │   │ verified        │
+                         │   └─────────────────┘
+                         │
+                         │
+┌─────────────────┐      │   ┌─────────────────┐
+│ RefreshToken    │      │   │      Drug       │
+├─────────────────┤      │   ├─────────────────┤
+│ id (UUID) PK    │      │   │ id (UUID) PK    │
+│ user_id FK ─────│──────┘   │ genericName     │
+│ token (unique)  │          │ brandName       │
+│ expiresAt       │          │ manufacturer    │
+│ createdAt       │          │ description     │
+└─────────────────┘          │ uses            │
+                             │ dosageForm      │
+                             │ strength        │
+                             │ route           │
+                             │ dosage          │
+                             │ sideEffects     │
+                             │ contraindications│
+                             │ pregnancyCategory│
+                             │ storage         │
+                             │ image           │
+                             │ isActive        │
+                             └────────┬────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    │                 │                   │
+                    ▼                 ▼                   ▼
+        ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+        │AlternativeMed.  │ │DrugInteraction  │ │InteractionHist. │
+        ├─────────────────┤ ├─────────────────┤ ├─────────────────┤
+        │ id (UUID) PK    │ │ id (UUID) PK    │ │ id (UUID) PK    │
+        │ drug_id FK      │ │ drugA_id FK     │ │ user_id FK      │
+        │ altDrugName     │ │ drugB_id FK     │ │ drugA_id FK     │
+        │ altGenericName  │ │ severity        │ │ drugB_id FK     │
+        │ reason          │ │ description     │ │ drugsChecked    │
+        └─────────────────┘ └─────────────────┘ │ interactionResult│
+                                                │ checkedAt       │
+                                                └─────────────────┘
+
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│      Doctor     │   │  Appointment    │   │MedicationReminder│
+├─────────────────┤   ├─────────────────┤   ├─────────────────┤
+│ id (UUID) PK    │   │ id (UUID) PK    │   │ id (UUID) PK    │
+│ user_id FK      │   │ patientId FK    │   │ userId FK       │
+│ specialization  │   │ doctorId FK     │   │ drugName        │
+│ licenseNumber   │   │ doctorName      │   │ dosage          │
+│ hospital        │   │ appointmentTime │   │ frequency       │
+│ verified        │   │ reason          │   │ reminderTime    │
+│ experience      │   │ status (enum)   │   │ notificationEnabled│
+│ consultationFee │   │ notes           │   │ isActive        │
+│ bio             │   │ createdAt       │   │ createdAt       │
+└─────────────────┘   └─────────────────┘   └─────────────────┘
+
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│MedicationHistory│   │EducationContent │   │  Notification   │
+├─────────────────┤   ├─────────────────┤   ├─────────────────┤
+│ id (UUID) PK    │   │ id (UUID) PK    │   │ id (UUID) PK    │
+│ userId FK       │   │ title           │   │ userId FK       │
+│ drugName        │   │ description     │   │ title           │
+│ dosage          │   │ contentType     │   │ message         │
+│ status (enum)   │   │ contentUrl      │   │ isRead          │
+│ scheduledDate   │   │ contentText     │   │ createdAt       │
+│ takenAt         │   │ author          │   └─────────────────┘
+│ notes           │   │ category        │
+│ createdAt       │   │ createdAt       │
+└─────────────────┘   └─────────────────┘
+
+┌─────────────────┐   ┌─────────────────┐
+│   AiProvider    │   │    AiHistory    │
+├─────────────────┤   ├─────────────────┤
+│ id (UUID) PK    │   │ id (UUID) PK    │
+│ name            │   │ userId FK       │
+│ providerType    │   │ prompt          │
+│ isActive        │   │ response        │
+│ isSelected      │   │ provider        │
+└─────────────────┘   │ requestType     │
+                      │ createdAt       │
+┌─────────────────┐   └─────────────────┘
+│  ChatHistory    │
+├─────────────────┤
+│ id (UUID) PK    │
+│ userId FK       │
+│ messageRole     │
+│ messageContent  │
+│ sessionId       │
+│ createdAt       │
+└─────────────────┘
+```
+
+## Security Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SUCCESS RESPONSE                                     │
+│                         SECURITY CONFIGURATION                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  {                                                                          │
-│    "success": true,                                                         │
-│    "message": "Drugs retrieved successfully",                               │
-│    "data": [                                                                │
-│      {                                                                      │
-│        "id": "uuid",                                                        │
-│        "drugName": "Aspirin",                                               │
-│        "genericName": "Acetylsalicylic acid",                               │
-│        ...                                                                  │
-│      }                                                                      │
-│    ]                                                                        │
-│  }                                                                          │
+│                                                                             │
+│  Request                                                                    │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CSRF Protection          → DISABLED (Stateless REST API)           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Session Management       → STATELESS (No server-side sessions)     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CORS                     → Allow all origins (development)         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Password Encoding        → BCrypt                                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  JWT Filter               → JwtAuthenticationFilter                 │   │
+│  │                           → Extracts Bearer token                   │   │
+│  │                           → Validates with JwtUtil                  │   │
+│  │                           → Sets Authentication in SecurityContext   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│     │                                                                       │
+│     ▼                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Authorization Rules:                                                │   │
+│  │                                                                      │   │
+│  │  PUBLIC:                                                             │   │
+│  │    • /actuator/health                                                │   │
+│  │    • /api/auth/register, /api/auth/login, /api/auth/refresh-token   │   │
+│  │    • OPTIONS /** (CORS preflight)                                    │   │
+│  │                                                                      │   │
+│  │  ROLE_ADMIN:                                                         │   │
+│  │    • /api/admin/**                                                   │   │
+│  │                                                                      │   │
+│  │  AUTHENTICATED (any role):                                           │   │
+│  │    • All other /api/** endpoints                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
 
+## JWT Token Structure
+
+```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ERROR RESPONSE                                       │
+│                         JWT TOKEN FLOW                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  {                                                                          │
-│    "success": false,                                                        │
-│    "message": "Drug not found with id: '123e4567-e89b-12d3-a456-426614174000'",│
-│    "data": null                                                             │
-│  }                                                                          │
+│                                                                             │
+│  Register/Login                                                             │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                     │
+│  │  AuthReq    │───►│ AuthService │───►│  AuthResp   │                     │
+│  │  (email,    │    │             │    │  accessToken│                     │
+│  │   password) │    │ BCrypt check│    │  refreshToken│                    │
+│  └─────────────┘    └─────────────┘    │  tokenType  │                     │
+│                                        │  email, name│                     │
+│                                        │  role       │                     │
+│                                        └─────────────┘                     │
+│                                                                             │
+│  Access Token Payload:                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  {                                                                  │   │
+│  │    "type": "access",                                                │   │
+│  │    "sub": "user@email.com",                                         │   │
+│  │    "iat": 1784809177,                                               │   │
+│  │    "exp": 1784895577                                                │   │
+│  │  }                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Refresh Token: UUID stored in refresh_tokens table                         │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -451,35 +604,30 @@ com.opu.springrestapi/
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  PRESENTATION / CLIENT                                              │   │
-│  │  • Mobile Apps (iOS/Android)                                        │   │
-│  │  • Web Applications                                                 │   │
-│  │  • Third-party Integrations                                         │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  APPLICATION LAYER                                                  │   │
+│  │  APPLICATION FRAMEWORK                                              │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │   │
 │  │  │ Spring Boot │  │ Spring MVC  │  │   Lombok    │                 │   │
 │  │  │    4.1.0    │  │    WebMVC   │  │             │                 │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SECURITY & AUTH                                                    │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │   │
-│  │  │   Spring    │  │  Validation │  │   Actuator  │                 │   │
-│  │  │   Security  │  │             │  │             │                 │   │
+│  │  │   Spring    │  │ JWT (jjwt)  │  │   BCrypt    │                 │   │
+│  │  │   Security  │  │   0.12.6    │  │  (password) │                 │   │
+│  │  │    6.x      │  │             │  │             │                 │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘                 │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  PERSISTENCE LAYER                                                  │   │
+│  │  PERSISTENCE                                                        │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │   │
 │  │  │ Spring Data │  │  Hibernate  │  │   Flyway    │                 │   │
 │  │  │     JPA     │  │    7.4.1    │  │ (disabled)  │                 │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘                 │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
+│                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  DATABASE                                                           │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │   │
@@ -489,46 +637,11 @@ com.opu.springrestapi/
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  BUILD TOOLS                                                       │   │
-│  │  ┌─────────────┐  ┌─────────────┐                                  │   │
-│  │  │   Maven     │  │  Java 17    │                                  │   │
-│  │  │  (mvnw)     │  │             │                                  │   │
-│  │  └─────────────┘  └─────────────┘                                  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Security Configuration
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SECURITY CONFIGURATION                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Request                                                                    │
-│     │                                                                       │
-│     ▼                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  CSRF Protection          → DISABLED (Stateless API)                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│     │                                                                       │
-│     ▼                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Session Management       → STATELESS (No server-side sessions)     │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│     │                                                                       │
-│     ▼                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Password Encoding        → BCrypt                                   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│     │                                                                       │
-│     ▼                                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Authorization Rules:                                                │   │
-│  │  • /actuator/health      → permitAll (Public)                       │   │
-│  │  • OPTIONS /**           → permitAll (CORS)                         │   │
-│  │  • Any other request     → permitAll (Development mode)             │   │
+│  │  BUILD & RUNTIME                                                    │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │   │
+│  │  │   Maven     │  │  Java 17    │  │  Actuator   │                 │   │
+│  │  │  (mvnw)     │  │             │  │  (health)   │                 │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘                 │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -543,23 +656,28 @@ com.opu.springrestapi/
 │                                                                             │
 │  Development                                                                │
 │  ──────────────                                                             │
-│  $ ./mvnw spring-boot:run          Start with hot reload                    │
+│  $ ./mvnw spring-boot:run          Start with devtools (hot reload)        │
 │  $ ./mvnw compile                  Compile only                            │
 │                                                                             │
-│  Build                                                                      │
-│  ─────                                                                      │
-│  $ ./mvnw clean install            Clean build + tests                     │
-│  $ ./mvnw clean package           Create JAR                              │
+│  Build JAR                                                                  │
+│  ────────                                                                   │
+│  $ ./mvnw clean package -DskipTests  Build JAR (skip tests)                │
+│  $ java -jar target/springRestApi-0.0.1-SNAPSHOT.jar  Run JAR             │
 │                                                                             │
 │  Testing                                                                    │
 │  ───────                                                                    │
 │  $ ./mvnw test                     Run unit tests                          │
-│  $ curl localhost:8080/actuator/health  Health check                       │
+│  $ curl localhost:8080/actuator/health  Health check                        │
 │                                                                             │
-│  Database                                                                   │
-│  ────────                                                                   │
-│  $ ./mvnw flyway:migrate           Run migrations (when enabled)          │
-│  $ ./mvnw flyway:info              Show migration status                   │
+│  Database Reset (Supabase)                                                  │
+│  ─────────────────────────                                                  │
+│  $ psql -h aws-0-ap-northeast-1.pooler.supabase.com ...                    │
+│    > DROP SCHEMA public CASCADE;                                            │
+│    > CREATE SCHEMA public;                                                  │
+│    > GRANT ALL ON SCHEMA public TO postgres;                                │
+│    > GRANT ALL ON SCHEMA public TO public;                                  │
+│                                                                             │
+│  (Tables auto-created by Hibernate ddl-auto: update on startup)             │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -568,28 +686,59 @@ com.opu.springrestapi/
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         FILE COUNT SUMMARY                                   │
+│                         FILE COUNT                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  Controllers       │  14 files  │  REST API endpoints                      │
-│  Models            │  23 files  │  JPA entities                            │
-│  Repositories      │  23 files  │  Data access layer                       │
-│  DTOs              │   2 files  │  Data transfer objects                   │
-│  Exceptions        │   2 files  │  Error handling                          │
-│  Config            │   1 file   │  Security configuration                  │
-│  Application       │   1 file   │  Main entry point                        │
-│  ──────────────────────────────────────────────────────────────────────     │
-│  TOTAL             │  66 Java files                                         │
+│  Java Files (com.intellimeds):        107                                   │
+│  Controllers:                          16                                   │
+│  Services:                             16                                   │
+│  Repositories:                         16                                   │
+│  Models/Entities:                      14                                   │
+│  DTOs:                                 ~20                                  │
+│  Config/Security:                       6                                   │
+│  Exception:                             2                                   │
+│  Resources:                                                                   │
+│    application.properties:              1                                   │
+│    V1__init_schema.sql:                 1                                   │
+│  Build:                                                                  │
+│    pom.xml:                             1                                   │
 │                                                                             │
-│  Resources                                                                  │
-│  ─────────                                                                  │
-│  application.properties │   1 file   │  App configuration                  │
-│  V1__init_schema.sql    │   1 file   │  Database migration                 │
+│  Total: ~170 files                                                          │
 │                                                                             │
-│  Build                                                                      │
-│  ─────                                                                      │
-│  pom.xml            │   1 file   │  Maven configuration                    │
-│  mvnw / mvnw.cmd    │   2 files  │  Maven wrapper                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Module Status
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         MODULE STATUS                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Module                              Status    Tests                        │
+│  ──────────────────────────────────  ────────  ──────────────────────────   │
+│  1.  Authentication                  ✅ DONE   Register, Login, Refresh     │
+│  2.  User/Profile                    ✅ DONE   CRUD + auto-create           │
+│  3.  Drug                            ✅ DONE   CRUD + search                │
+│  4.  Drug Interaction                ✅ DONE   Check + history              │
+│  5.  AI Explanation                  ✅ DONE   Explain endpoint             │
+│  6.  AI Provider                     ✅ DONE   4 providers seeded           │
+│  7.  AI Chatbot                      ✅ DONE   Symptom responses            │
+│  8.  AI History                      ✅ DONE   Auto-save                    │
+│  9.  Medication Reminder             ✅ DONE   CRUD                         │
+│  10. Medication History              ✅ DONE   GET history                  │
+│  11. Doctor                          ✅ DONE   GET doctors                  │
+│  12. Appointment                     ✅ DONE   CRUD                         │
+│  13. Patient Education               ✅ DONE   CRUD                         │
+│  14. Notification                    ✅ DONE   GET/PUT/DELETE               │
+│  15. Admin Drug Mgmt                 ✅ DONE   CRUD (ADMIN only)            │
+│  16. Admin User Mgmt                 ✅ DONE   CRUD + status toggle         │
+│  17. Reports & Analytics             ✅ DONE   Dashboard stats              │
+│  18. Search Suggestions              ✅ DONE   Autocomplete                 │
+│  19. Download & Share                ✅ DONE   Drug info download           │
+│  20. Notification (dedicated)        ✅ DONE   System notifications         │
+│                                                                             │
+│  All 20 modules: ✅ IMPLEMENTED AND VERIFIED                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
