@@ -1,0 +1,58 @@
+/* IntelliMeds — product app design tokens (mirrors the Figma "IntelliMeds — Product Design" system) */
+:root {
+  /* brand teal */
+  --teal-50:#e6faf6; --teal-100:#c3f3e8; --teal-300:#4fd9bd; --teal-400:#12c7a3;
+  --teal-500:#02c39a; --teal-600:#02a888; --teal-700:#028090; --teal-800:#036672;
+
+  /* neutrals (teal-biased) */
+  --ink:#0b1f22; --ink-700:#1c3538; --muted:#5c7a7d;
+  --paper:#eef4f2; --surface:#ffffff; --surface-2:#f6faf9;
+  --line:#dfeae7; --line-soft:#eef2f1;
+
+  /* semantic (from tokens) */
+  --bg-canvas:var(--paper); --bg-surface:var(--surface); --bg-soft:var(--teal-50);
+  --brand:var(--teal-500); --brand-deep:var(--teal-700);
+  --text-primary:var(--ink); --text-secondary:var(--muted); --text-brand:var(--teal-700);
+  --border:var(--line); --border-subtle:var(--line-soft);
+
+  /* severity (kept separate from brand accent) */
+  --sev-major:#e5484d;    --sev-major-bg:#fdecec;
+  --sev-moderate:#e8890c; --sev-moderate-bg:#fdf1e3;
+  --sev-minor:#12b886;    --sev-minor-bg:#e6f7f0;
+  --sev-unknown:#5c7a7d;  --sev-unknown-bg:#eef2f1;
+
+  /* spacing scale */
+  --sp-xs:4px; --sp-sm:8px; --sp-md:12px; --sp-lg:16px; --sp-xl:24px;
+  --sp-2xl:32px; --sp-3xl:48px; --sp-4xl:64px;
+
+  /* radius */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px; --r-2xl:28px; --r-full:999px;
+
+  /* elevation */
+  --shadow-sm:0 1px 2px rgba(11,31,34,.06), 0 1px 3px rgba(11,31,34,.05);
+  --shadow-md:0 6px 18px rgba(11,31,34,.07), 0 2px 4px rgba(11,31,34,.06);
+  --shadow-lg:0 12px 28px rgba(11,31,34,.12), 0 4px 8px rgba(11,31,34,.06);
+  --shadow-brand:0 8px 20px rgba(2,195,154,.35);
+
+  --gradient:linear-gradient(135deg, var(--teal-500), var(--teal-700));
+  --gradient-soft:linear-gradient(135deg, #06d0a6, var(--teal-700));
+
+  --font:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* base reset scoped to the app root so the landing page is untouched */
+.im-app, .im-app *, .im-app *::before, .im-app *::after { box-sizing:border-box; }
+.im-app {
+  font-family:var(--font);
+  color:var(--text-primary);
+  background:var(--bg-canvas);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+.im-app h1,.im-app h2,.im-app h3,.im-app h4 { margin:0; font-weight:700; letter-spacing:-.02em; line-height:1.15; }
+.im-app p { margin:0; }
+.im-app button { font-family:inherit; cursor:pointer; }
+.im-app :focus-visible { outline:2px solid var(--brand); outline-offset:2px; border-radius:4px; }
+.im-app .tnum { font-variant-numeric:tabular-nums; }
+.im-app .eyebrow { font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--text-brand); }
