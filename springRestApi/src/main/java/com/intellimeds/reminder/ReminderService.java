@@ -23,12 +23,14 @@ public class ReminderService {
     private final MedicationReminderRepository reminderRepository;
     private final DrugRepository drugRepository;
 
+    @Transactional(readOnly = true)
     public List<ReminderResponse> getReminders(UUID userId) {
         return reminderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ReminderResponse getReminderById(UUID id) {
         MedicationReminder reminder = reminderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reminder", "id", id));

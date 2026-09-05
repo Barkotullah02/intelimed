@@ -10,6 +10,7 @@ import 'screens/doctors_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/check_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/doctor_screens.dart';
 
 void main() {
   final api = ApiClient();
@@ -46,7 +47,10 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final signedIn = context.select<AuthProvider, bool>((a) => a.isSignedIn);
-    return signedIn ? const RootShell() : const LoginScreen();
+    if (!signedIn) return const LoginScreen();
+    // Healthcare professionals get the doctor experience; everyone else the patient app.
+    final role = context.select<AuthProvider, String?>((a) => a.user?.role);
+    return role == 'ROLE_HEALTHCARE_PROFESSIONAL' ? const DoctorShell() : const RootShell();
   }
 }
 

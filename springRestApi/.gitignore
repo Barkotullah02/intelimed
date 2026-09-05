@@ -3,3 +3,6 @@
 
 # Build
 target/
+
+# Runtime logs
+*.log

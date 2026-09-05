@@ -214,8 +214,9 @@ class ApiChatHistory {
 }
 
 class ApiAppointment {
-  const ApiAppointment({required this.id, this.patientName, this.doctorName, this.doctorSpecialization, this.appointmentDate, this.status, this.reason});
+  const ApiAppointment({required this.id, this.patientId, this.patientName, this.doctorName, this.doctorSpecialization, this.appointmentDate, this.status, this.reason});
   final String id;
+  final String? patientId;
   final String? patientName;
   final String? doctorName;
   final String? doctorSpecialization;
@@ -225,12 +226,86 @@ class ApiAppointment {
 
   factory ApiAppointment.fromJson(Map<String, dynamic> j) => ApiAppointment(
         id: j['id']?.toString() ?? '',
+        patientId: j['patientId']?.toString(),
         patientName: j['patientName'] as String?,
         doctorName: j['doctorName'] as String?,
         doctorSpecialization: j['doctorSpecialization'] as String?,
         appointmentDate: j['appointmentDate'] as String?,
         status: j['status'] as String?,
         reason: j['reason'] as String?,
+      );
+}
+
+class ApiIceServer {
+  const ApiIceServer({required this.urls, this.username, this.credential});
+  final List<String> urls;
+  final String? username;
+  final String? credential;
+
+  factory ApiIceServer.fromJson(Map<String, dynamic> j) => ApiIceServer(
+        urls: (j['urls'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(),
+        username: j['username'] as String?,
+        credential: j['credential'] as String?,
+      );
+
+  /// Shape expected by flutter_webrtc's RTCPeerConnection config.
+  Map<String, dynamic> toRtc() => {
+        'urls': urls,
+        if (username != null && username!.isNotEmpty) 'username': username,
+        if (credential != null && credential!.isNotEmpty) 'credential': credential,
+      };
+}
+
+class ApiConsultation {
+  const ApiConsultation({
+    required this.id,
+    required this.roomCode,
+    required this.callType,
+    required this.status,
+    required this.patientId,
+    required this.patientName,
+    required this.doctorId,
+    required this.doctorName,
+    required this.selfIsDoctor,
+    required this.signalingUrl,
+    required this.iceServers,
+    this.createdAt,
+    this.startedAt,
+    this.endedAt,
+  });
+  final String id;
+  final String roomCode;
+  final String callType; // VIDEO | AUDIO
+  final String status; // SCHEDULED | ACTIVE | ENDED | CANCELLED
+  final String patientId;
+  final String patientName;
+  final String doctorId;
+  final String doctorName;
+  final bool selfIsDoctor;
+  final String signalingUrl;
+  final List<ApiIceServer> iceServers;
+  final String? createdAt;
+  final String? startedAt;
+  final String? endedAt;
+
+  bool get isVideo => callType == 'VIDEO';
+  bool get isLive => status == 'SCHEDULED' || status == 'ACTIVE';
+
+  factory ApiConsultation.fromJson(Map<String, dynamic> j) => ApiConsultation(
+        id: j['id']?.toString() ?? '',
+        roomCode: j['roomCode'] as String? ?? '',
+        callType: j['callType'] as String? ?? 'VIDEO',
+        status: j['status'] as String? ?? 'SCHEDULED',
+        patientId: j['patientId']?.toString() ?? '',
+        patientName: j['patientName'] as String? ?? '',
+        doctorId: j['doctorId']?.toString() ?? '',
+        doctorName: j['doctorName'] as String? ?? '',
+        selfIsDoctor: j['self_isDoctor'] as bool? ?? false,
+        signalingUrl: j['signalingUrl'] as String? ?? '',
+        iceServers: (j['iceServers'] as List<dynamic>? ?? []).map((e) => ApiIceServer.fromJson(e as Map<String, dynamic>)).toList(),
+        createdAt: j['createdAt'] as String?,
+        startedAt: j['startedAt'] as String?,
+        endedAt: j['endedAt'] as String?,
       );
 }
 

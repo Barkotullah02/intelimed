@@ -4,10 +4,12 @@ import 'models.dart';
 
 /// Base URL of the Spring REST API.
 ///
-/// - iOS simulator / desktop: `http://localhost:8080/api`
-/// - Android emulator: use `http://10.0.2.2:8080/api`
-/// - Physical device: use your machine's LAN IP, e.g. `http://192.168.1.5:8080/api`
-const String kApiBase = 'https://reliability-scout-leonard-undefined.trycloudflare.com/api';
+/// Production VPS (Hetzner) — reachable from any device (emulator or real phone).
+/// For local dev instead, use one of:
+///   - iOS simulator / desktop: `http://localhost:8080/api`
+///   - Android emulator:        `http://10.0.2.2:8080/api`
+///   - Physical device on LAN:  `http://<your-machine-ip>:8080/api`
+const String kApiBase = 'http://91.98.154.10:8080/api';
 
 /// Thin HTTP client for the IntelliMeds API: attaches the bearer token,
 /// unwraps the `{ success, message, data }` envelope, and refreshes on 401.
@@ -21,6 +23,9 @@ class ApiClient {
   String? _refreshToken;
 
   bool get isAuthenticated => _accessToken != null;
+
+  /// Exposed so the WebRTC signaling WebSocket can authenticate (`?token=`).
+  String? get accessToken => _accessToken;
 
   void setTokens(String access, String refresh) {
     _accessToken = access;
@@ -170,6 +175,37 @@ class ApiClient {
     return ApiDoctor.fromJson(data as Map<String, dynamic>);
   }
 
+  /// The signed-in professional's own doctor record (verification status + credentials).
+  Future<ApiDoctor> getMyDoctorApplication() async {
+    final data = await _send('GET', '/doctors/me');
+    return ApiDoctor.fromJson(data as Map<String, dynamic>);
+  }
+
+  // ---------------- Consultations (video/audio) ----------------
+  Future<List<ApiConsultation>> listMyConsultations() async {
+    final data = await _send('GET', '/consultations/mine');
+    return (data as List).map((e) => ApiConsultation.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<ApiConsultation> createConsultation({String? doctorId, String? patientId, String callType = 'VIDEO'}) async {
+    final data = await _send('POST', '/consultations', body: {
+      if (doctorId != null) 'doctorId': doctorId,
+      if (patientId != null) 'patientId': patientId,
+      'callType': callType,
+    });
+    return ApiConsultation.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<ApiConsultation> joinConsultation(String id) async {
+    final data = await _send('POST', '/consultations/$id/join');
+    return ApiConsultation.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<ApiConsultation> endConsultation(String id) async {
+    final data = await _send('POST', '/consultations/$id/end');
+    return ApiConsultation.fromJson(data as Map<String, dynamic>);
+  }
+
   // ---------------- Reminders ----------------
   Future<List<ApiReminder>> listReminders() async {
     final data = await _send('GET', '/reminders');
@@ -214,6 +250,12 @@ class ApiClient {
   // ---------------- Appointments ----------------
   Future<List<ApiAppointment>> listAppointments() async {
     final data = await _send('GET', '/appointments');
+    return (data as List).map((e) => ApiAppointment.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Appointments for the signed-in doctor.
+  Future<List<ApiAppointment>> listDoctorAppointments() async {
+    final data = await _send('GET', '/appointments/doctor');
     return (data as List).map((e) => ApiAppointment.fromJson(e as Map<String, dynamic>)).toList();
   }
 

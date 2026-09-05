@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Allow plain HTTP to the VPS API (no TLS yet). Tighten/remove once the API is on HTTPS. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>IntelliMeds uses your camera for video consultations with doctors.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>IntelliMeds uses your microphone for audio and video consultations with doctors.</string>
 </dict>
 </plist>

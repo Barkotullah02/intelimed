@@ -4,6 +4,8 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'consultations_screen.dart';
+import 'call_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -35,6 +37,17 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   String _initials(String name) => name.trim().split(' ').map((s) => s.isEmpty ? '' : s[0]).take(2).join();
 
+  Future<void> _startCall(ApiDoctor d) async {
+    try {
+      final api = context.read<ApiClient>();
+      final consult = await api.createConsultation(doctorId: d.id, callType: 'VIDEO');
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(consultation: consult)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not start the call: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -43,6 +56,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         Row(
           children: [
             Expanded(child: Text('My doctors', style: AppText.h1)),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConsultationsScreen())),
+              icon: const Icon(Icons.call, size: 18, color: AppColors.teal700),
+              label: const Text('Calls', style: TextStyle(color: AppColors.teal700, fontWeight: FontWeight.w600)),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -82,7 +100,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ),
                   _RoundAction(icon: Icons.chat_bubble_outline, onTap: () {}),
                   const SizedBox(width: 8),
-                  _RoundAction(icon: Icons.call_outlined, filled: true, onTap: () {}),
+                  _RoundAction(icon: Icons.videocam_outlined, filled: true, onTap: () => _startCall(d)),
                 ],
               ),
             ),
