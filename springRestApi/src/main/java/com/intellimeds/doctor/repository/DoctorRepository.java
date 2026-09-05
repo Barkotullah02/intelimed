@@ -7,12 +7,19 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     List<Doctor> findByVerifiedTrueAndAvailableTrue();
+
+    List<Doctor> findByVerificationStatus(Doctor.VerificationStatus status);
+
+    Optional<Doctor> findByProfileUserId(UUID userId);
+
+    boolean existsByProfileUserId(UUID userId);
 
     @Query("SELECT d FROM Doctor d WHERE " +
            "LOWER(d.specialization) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

@@ -66,6 +66,7 @@
   padding:26px 18px; display:flex; flex-direction:column; gap:6px; position:sticky; top:0; height:100vh; }
 .im-logo { display:flex; align-items:center; gap:10px; padding:2px 8px 18px; }
 .im-logo__mark { width:34px; height:34px; border-radius:10px; background:var(--gradient); display:grid; place-items:center; color:#fff; }
+.im-logo__img { width:34px; height:34px; object-fit:contain; display:block; }
 .im-logo__name { font-weight:800; font-size:18px; letter-spacing:-.02em; }
 .im-nav { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px;
   color:var(--muted); font-size:15px; font-weight:500; border:0; background:transparent; text-align:left; width:100%; transition:.15s; }
@@ -75,6 +76,10 @@
 .im-nav__user { display:flex; align-items:center; gap:10px; padding:12px 10px; border-top:1px solid var(--border-subtle); margin-top:6px; }
 .im-nav__user small { display:block; color:var(--muted); font-size:12px; }
 .im-nav__user b { font-size:13.5px; }
+.im-nav__user-meta { flex:1; min-width:0; overflow:hidden; }
+.im-nav__user-meta b, .im-nav__user-meta small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.im-nav__logout { display:grid; place-items:center; width:34px; height:34px; border:none; border-radius:9px; background:transparent; color:var(--muted); cursor:pointer; flex:none; transition:background .15s, color .15s; }
+.im-nav__logout:hover { background:var(--sev-major-bg, #fdecec); color:var(--sev-major, #e5484d); }
 
 .im-main { flex:1; min-width:0; padding:34px 40px 56px; display:flex; flex-direction:column; gap:26px; }
 .im-topbar { display:flex; align-items:center; gap:16px; }
@@ -281,3 +286,97 @@
   .im-sidebar { display:none; }
   .im-main { padding:20px; }
 }
+
+/* ============================ Tele-consultation call ============================ */
+.im-callstage {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+.im-callstage__remote {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #0b1f22;
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.im-callstage__remote video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.im-callstage__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #cfe6e1;
+}
+.im-callstage__avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--brand, #02c39a), var(--brand-deep, #028090));
+  color: #fff;
+}
+.im-callstage__local {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: #123;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.25));
+}
+.im-callstage__local video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror self-view */
+}
+.im-callstage__camoff {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #cfe6e1;
+  font-size: 12.5px;
+  background: #0b1f22;
+}
+.im-callbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+.im-callbar__hangup {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--sev-major, #e5484d);
+  transform: rotate(135deg);
+  transition: filter 0.15s ease;
+}
+.im-callbar__hangup:hover { filter: brightness(0.92); }
+
+.im-cstat { font-weight: 600; }
+.im-cstat--active { color: var(--sev-minor, #12b886); }
+.im-cstat--scheduled { color: var(--sev-moderate, #e8890c); }
+.im-cstat--ended, .im-cstat--cancelled { color: var(--muted, #5c7a7d); }

@@ -4,6 +4,9 @@ import com.intellimeds.doctor.dto.DoctorResponse;
 import com.intellimeds.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +18,14 @@ import java.util.UUID;
 public class DoctorController {
 
     private final DoctorService doctorService;
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('HEALTHCARE_PROFESSIONAL')")
+    public ResponseEntity<ApiResponse<DoctorResponse>> getMyApplication() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        DoctorResponse doctor = doctorService.getMyApplication(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Doctor application retrieved", doctor));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<DoctorResponse>>> getAllDoctors() {

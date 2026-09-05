@@ -1,6 +1,8 @@
 package com.intellimeds.auth;
 
 import com.intellimeds.auth.dto.*;
+import com.intellimeds.doctor.model.Doctor;
+import com.intellimeds.doctor.repository.DoctorRepository;
 import com.intellimeds.exception.ResourceNotFoundException;
 import com.intellimeds.model.Profile;
 import com.intellimeds.model.RefreshToken;
@@ -36,6 +38,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ProfileRepository profileRepository;
+    private final DoctorRepository doctorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
@@ -46,9 +49,10 @@ public class AuthService {
             throw new IllegalStateException("Email already registered");
         }
 
-        Role role = roleRepository.findByName(
-                Role.RoleName.valueOf(request.getRole().toUpperCase()))
-                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", request.getRole()));
+        Role.RoleName requestedRole = resolveSelfRegistrationRole(request.getRole());
+
+        Role role = roleRepository.findByName(requestedRole)
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", requestedRole.name()));
 
         Set<Role> roles = new HashSet<>();
         roles.add(role);
@@ -69,6 +73,12 @@ public class AuthService {
                 .fullName(user.getName())
                 .build();
         profileRepository.save(profile);
+
+        // A healthcare professional starts life as an unverified doctor application
+        // that an admin must approve before it shows in the directory.
+        if (requestedRole == Role.RoleName.ROLE_HEALTHCARE_PROFESSIONAL) {
+            createDoctorApplication(request, profile);
+        }
 
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
@@ -184,6 +194,46 @@ public class AuthService {
                 .role(roleName)
                 .isActive(user.getIsActive())
                 .build();
+    }
+
+    /**
+     * Resolve the role a public sign-up is allowed to claim.
+     * Only PATIENT and HEALTHCARE_PROFESSIONAL may be self-selected — ADMIN
+     * accounts are provisioned server-side (see DataInitializer), never via
+     * the open /api/auth/register endpoint.
+     */
+    private Role.RoleName resolveSelfRegistrationRole(String requested) {
+        Role.RoleName role;
+        try {
+            role = Role.RoleName.valueOf(requested.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid role '" + requested + "'. Allowed: ROLE_PATIENT, ROLE_HEALTHCARE_PROFESSIONAL");
+        }
+        if (role == Role.RoleName.ROLE_ADMIN) {
+            throw new IllegalStateException("Admin accounts cannot be created through registration");
+        }
+        return role;
+    }
+
+    private void createDoctorApplication(RegisterRequest request, Profile profile) {
+        if (request.getSpecialization() == null || request.getSpecialization().isBlank()
+                || request.getLicenseNumber() == null || request.getLicenseNumber().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Specialization and license number are required to register as a healthcare professional");
+        }
+        Doctor doctor = Doctor.builder()
+                .profile(profile)
+                .specialization(request.getSpecialization().trim())
+                .licenseNumber(request.getLicenseNumber().trim())
+                .hospital(request.getHospital())
+                .experienceYears(request.getExperienceYears())
+                .credentialDocument(request.getCredentialDocument())
+                .verified(false)
+                .verificationStatus(Doctor.VerificationStatus.PENDING)
+                .available(true)
+                .build();
+        doctorRepository.save(doctor);
     }
 
     private String generateRefreshToken(User user) {

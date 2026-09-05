@@ -28,4 +28,12 @@ public class RegisterRequest {
 
     @NotBlank(message = "Role is required")
     private String role;
+
+    // Professional-only fields. Required when role is ROLE_HEALTHCARE_PROFESSIONAL;
+    // ignored otherwise. Validated in AuthService.
+    private String specialization;
+    private String licenseNumber;
+    private String hospital;
+    private Integer experienceYears;
+    private String credentialDocument;
 }

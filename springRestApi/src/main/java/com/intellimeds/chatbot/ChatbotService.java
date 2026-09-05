@@ -1,5 +1,6 @@
 package com.intellimeds.chatbot;
 
+import com.intellimeds.ai.client.GeminiClient;
 import com.intellimeds.chatbot.dto.*;
 import com.intellimeds.chatbot.model.ChatHistory;
 import com.intellimeds.chatbot.repository.ChatHistoryRepository;
@@ -19,6 +20,7 @@ public class ChatbotService {
 
     private final ChatHistoryRepository chatHistoryRepository;
     private final UserRepository userRepository;
+    private final GeminiClient geminiClient;
 
     @Transactional
     public ChatResponse sendMessage(ChatRequest request, UUID userId) {
@@ -60,34 +62,15 @@ public class ChatbotService {
     }
 
     private String generateResponse(String message) {
-        String lowerMessage = message.toLowerCase();
-
-        if (lowerMessage.contains("headache") || lowerMessage.contains("head pain")) {
-            return "For headaches, consider:\n" +
-                   "1. Rest in a quiet, dark room\n" +
-                   "2. Apply a cold compress to your forehead\n" +
-                   "3. Stay hydrated\n" +
-                   "4. Over-the-counter pain relievers like ibuprofen or acetaminophen\n\n" +
-                   "If headaches are severe or persistent, please consult a healthcare professional.";
-        } else if (lowerMessage.contains("fever") || lowerMessage.contains("temperature")) {
-            return "For fever management:\n" +
-                   "1. Rest and stay hydrated\n" +
-                   "2. Take acetaminophen or ibuprofen as directed\n" +
-                   "3. Wear light clothing\n" +
-                   "4. Use a lukewarm sponge bath\n\n" +
-                   "Seek medical attention if fever exceeds 103°F (39.4°C) or lasts more than 3 days.";
-        } else if (lowerMessage.contains("cold") || lowerMessage.contains("cough")) {
-            return "For cold/cough symptoms:\n" +
-                   "1. Get plenty of rest\n" +
-                   "2. Drink warm fluids\n" +
-                   "3. Use honey for cough (for adults and children over 1)\n" +
-                   "4. Consider over-the-counter cough medicine\n\n" +
-                   "See a doctor if symptoms worsen or persist beyond 10 days.";
+        if (geminiClient.isConfigured()) {
+            try {
+                return geminiClient.complete(GeminiClient.MEDICAL_SYSTEM_PROMPT, message);
+            } catch (GeminiClient.GeminiException e) {
+                // fall through to the safe offline reply
+            }
         }
-
-        return "Thank you for your message. I'm here to help with general health information. " +
-               "Please describe your symptoms or health concerns, and I'll provide relevant information. " +
-               "Remember, this is not a substitute for professional medical advice.";
+        return "I can't reach the assistant right now. For any medication or health question, "
+             + "please consult your doctor or pharmacist — and seek emergency care for anything urgent.";
     }
 
     private ChatHistoryResponse mapToResponse(ChatHistory chat) {

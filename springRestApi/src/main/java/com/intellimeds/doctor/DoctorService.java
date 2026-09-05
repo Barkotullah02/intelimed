@@ -4,17 +4,32 @@ import com.intellimeds.doctor.dto.DoctorResponse;
 import com.intellimeds.doctor.model.Doctor;
 import com.intellimeds.doctor.repository.DoctorRepository;
 import com.intellimeds.exception.ResourceNotFoundException;
+import com.intellimeds.model.User;
+import com.intellimeds.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+// Reads are transactional so the lazily-loaded Doctor.profile initializes
+// while the persistence session is still open (open-in-view is disabled).
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DoctorService {
 
     private final DoctorRepository doctorRepository;
+    private final UserRepository userRepository;
+
+    public DoctorResponse getMyApplication(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        Doctor doctor = doctorRepository.findByProfileUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor application", "user", email));
+        return mapToResponse(doctor);
+    }
 
     public List<DoctorResponse> getAllDoctors() {
         return doctorRepository.findAll().stream()
@@ -51,6 +66,8 @@ public class DoctorService {
                 .consultationFee(doctor.getConsultationFee())
                 .bio(doctor.getBio())
                 .verified(doctor.getVerified())
+                .verificationStatus(doctor.getVerificationStatus().name())
+                .rejectionReason(doctor.getRejectionReason())
                 .available(doctor.getAvailable())
                 .profileImage(doctor.getProfile().getProfileImage())
                 .build();

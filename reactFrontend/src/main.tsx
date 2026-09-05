@@ -4,7 +4,7 @@ import App from './App.tsx'
 import AppRoot from './app/AppRoot.tsx'
 import './index.css'
 
-const APP_PREFIXES = ['#/login', '#/register', '#/app', '#/admin', '#/mobile']
+const APP_PREFIXES = ['#/login', '#/register', '#/app', '#/admin', '#/doctor', '#/mobile', '#/call']
 const isAppRoute = (h: string) => APP_PREFIXES.some((p) => h.startsWith(p))
 
 function Root() {

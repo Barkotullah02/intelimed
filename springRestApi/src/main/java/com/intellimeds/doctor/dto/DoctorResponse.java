@@ -21,6 +21,8 @@ public class DoctorResponse {
     private Double consultationFee;
     private String bio;
     private Boolean verified;
+    private String verificationStatus;
+    private String rejectionReason;
     private Boolean available;
     private String profileImage;
 }

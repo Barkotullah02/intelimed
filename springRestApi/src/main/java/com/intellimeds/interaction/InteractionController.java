@@ -31,6 +31,14 @@ public class InteractionController {
         return ResponseEntity.ok(ApiResponse.success("Interactions checked successfully", response));
     }
 
+    @GetMapping("/for-drug/{drugId}")
+    public ResponseEntity<ApiResponse<List<DrugInteractionSummary>>> getForDrug(
+            @PathVariable UUID drugId,
+            @RequestParam(defaultValue = "50") int limit) {
+        List<DrugInteractionSummary> result = interactionService.getInteractionsForDrug(drugId, limit);
+        return ResponseEntity.ok(ApiResponse.success("Drug interactions retrieved", result));
+    }
+
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<InteractionHistoryResponse>>> getHistory(
             Authentication authentication) {

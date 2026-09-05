@@ -1,6 +1,49 @@
 # Visual Map - IntelliMeds Project
 
-## System Architecture
+> 📋 **Authoritative docs:** architecture & code map → [`../ARCHITECTURE.md`](../ARCHITECTURE.md);
+> build status & leftovers → [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md);
+> narrative report → [`../PROJECT_REPORT.md`](../PROJECT_REPORT.md).
+> The **Current Architecture** section immediately below is up to date (2026-09-04); the original
+> detailed diagrams that follow it are kept for reference and predate the WebRTC consultation,
+> doctor-verification, real-interaction-data, and Gemini-AI work.
+
+## Current Architecture (updated 2026-09-04)
+
+```
+   Web (React :5173) ┐        Mobile (Flutter) ┐        Admin (web #/admin/*) ┐
+                     └──── HTTPS/JSON + Bearer JWT ─────────────────────────────┘
+                                        ▼
+              ┌──────────────────────────────────────────────┐
+              │  Spring Boot REST API  :8080                  │
+              │  Controller → Service → Repository → Entity   │
+              │  JwtAuthenticationFilter + RBAC (@PreAuthorize)│
+              │  WebSocket /ws/signal  (WebRTC signaling relay)│
+              └──────┬──────────────────────────────┬─────────┘
+                     │ JPA/Hibernate                 │ HTTPS
+                     ▼                               ▼
+        PostgreSQL (Supabase, 20 tables)      Google Gemini API
+        drugs 1,922 · drug_interactions 155,630   (AI assistant)
+
+   Consultation media is peer-to-peer WebRTC + public STUN; server relays SDP/ICE only.
+```
+
+**Backend modules** (`com.intellimeds.*`): `auth` · `security` · `config` · `user` · `drug` ·
+`interaction` · `doctor` · `admin` (+ `AdminDoctor*` verification) · `consultation` (+ `signaling`) ·
+`ai` (+ `client/GeminiClient`) · `chatbot` · `appointment` · `reminder` · `medication` · `education` ·
+`notification` · `exception` · `dto` · `model`/`repository`.
+
+**Web** (`reactFrontend/src`): `main.tsx` (landing/app gate) → `app/AppRoot.tsx` (hash router + role
+guards) → `app/screens/{patient,doctor,admin,auth,call}.tsx`; API in `api/{client,services,types}.ts`.
+
+**Mobile** (`intelimed_mobile/lib`): `main.dart` (5-tab shell) → `screens/*`; `api/api_client.dart`;
+`providers/*`; `theme.dart`/`widgets.dart` mirror the web.
+
+Request flow example — `POST /api/interactions/check` → JWT filter → `InteractionController` →
+`InteractionService` → `DrugInteractionRepository.findByDrugIds` (JOIN FETCH) → `ApiResponse<…>`.
+
+---
+
+## System Architecture (original reference)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

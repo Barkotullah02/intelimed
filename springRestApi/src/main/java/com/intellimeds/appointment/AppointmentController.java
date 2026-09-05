@@ -31,6 +31,14 @@ public class AppointmentController {
         return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointments));
     }
 
+    @GetMapping("/doctor")
+    public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getDoctorAppointments(
+            Authentication authentication) {
+        User user = getUserFromAuth(authentication);
+        List<AppointmentResponse> appointments = appointmentService.getDoctorAppointmentsForUser(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Doctor appointments retrieved", appointments));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AppointmentResponse>> getAppointmentById(
             @PathVariable UUID id) {

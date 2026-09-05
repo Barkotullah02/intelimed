@@ -1,0 +1,664 @@
+<title>IntelliMeds — Figma Build Playbook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --teal-500:#02c39a; --teal-600:#02a888; --teal-700:#028090; --teal-50:#e6faf6; --teal-300:#4fd9bd;
+    --ink:#0b1f22; --paper:#eef4f2; --surface:#ffffff; --line:#dfeae7; --muted:#5c7a7d;
+    --sev-major:#e5484d; --sev-moderate:#e8890c; --sev-minor:#12b886; --sev-unknown:#5c7a7d;
+
+    --bg:#f4f7f6; --panel:#ffffff; --panel-2:#f6faf9; --text:#0b1f22; --text-dim:#5c7a7d;
+    --edge:#dfeae7; --edge-soft:#eef2f1; --accent:#028090; --accent-bright:#02c39a; --accent-soft:#e6faf6;
+    --code-bg:#eef4f2; --code-text:#036672;
+    --shadow-sm:0 1px 2px rgba(11,31,34,.06),0 1px 3px rgba(11,31,34,.05);
+    --shadow-md:0 6px 18px rgba(11,31,34,.07);
+    --radius:16px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0a1513; --panel:#11201d; --panel-2:#0e1b19; --text:#e8f0ee; --text-dim:#8faaa6;
+      --edge:#223330; --edge-soft:#1a2apx; --edge-soft:#1a2926; --accent:#4fd9bd; --accent-bright:#12c7a3; --accent-soft:#123029;
+      --code-bg:#0e1b19; --code-text:#5fe0c5;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 8px 22px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1513; --panel:#11201d; --panel-2:#0e1b19; --text:#e8f0ee; --text-dim:#8faaa6;
+    --edge:#223330; --edge-soft:#1a2926; --accent:#4fd9bd; --accent-bright:#12c7a3; --accent-soft:#123029;
+    --code-bg:#0e1b19; --code-text:#5fe0c5;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 8px 22px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f7f6; --panel:#ffffff; --panel-2:#f6faf9; --text:#0b1f22; --text-dim:#5c7a7d;
+    --edge:#dfeae7; --edge-soft:#eef2f1; --accent:#028090; --accent-bright:#02c39a; --accent-soft:#e6faf6;
+    --code-bg:#eef4f2; --code-text:#036672;
+    --shadow-sm:0 1px 2px rgba(11,31,34,.06),0 1px 3px rgba(11,31,34,.05); --shadow-md:0 6px 18px rgba(11,31,34,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+  a{color:var(--accent);text-decoration:none}
+  h1,h2,h3{text-wrap:balance;margin:0}
+
+  /* header */
+  header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(12px);border-bottom:1px solid var(--edge)}
+  .top-inner{max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em;font-size:17px}
+  .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent-bright),var(--accent));
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(2,195,154,.35)}
+  .progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim)}
+  .bar{width:120px;height:7px;border-radius:99px;background:var(--edge);overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent-bright),var(--accent));transition:width .3s}
+  .themebtn{border:1px solid var(--edge);background:var(--panel);color:var(--text);border-radius:9px;
+    padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+
+  nav.jump{display:flex;gap:8px;flex-wrap:wrap;padding:16px 0 8px;position:sticky;top:58px;z-index:10;background:var(--bg)}
+  nav.jump a{border:1px solid var(--edge);background:var(--panel);padding:6px 13px;border-radius:99px;font-size:13px;
+    font-weight:500;color:var(--text-dim)}
+  nav.jump a:hover{color:var(--accent);border-color:var(--accent)}
+
+  .hero{padding:40px 0 8px}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+  .hero h1{font-size:clamp(30px,5vw,44px);letter-spacing:-.03em;line-height:1.04;margin:12px 0 14px;font-weight:800}
+  .hero p{font-size:17px;color:var(--text-dim);max-width:62ch;margin:0}
+  .deadline{display:inline-flex;align-items:center;gap:8px;margin-top:18px;background:var(--accent-soft);
+    color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600}
+
+  section{margin-top:44px;scroll-margin-top:110px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--edge)}
+  .sec-head h2{font-size:23px;letter-spacing:-.02em;font-weight:750}
+  .sec-head .n{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+  .sec-head .hint{margin-left:auto;font-size:13px;color:var(--text-dim)}
+
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+  .note{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--accent);
+    border-radius:12px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+  .note strong{color:var(--text)}
+
+  /* token grids */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .sw{border:1px solid var(--edge);border-radius:12px;overflow:hidden;background:var(--panel)}
+  .sw .chip{height:64px}
+  .sw .meta{padding:9px 11px}
+  .sw .nm{font-weight:600;font-size:13px}
+  .sw .hex{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);margin-top:1px}
+  .sw .tok{font-family:var(--mono);font-size:10.5px;color:var(--accent);margin-top:3px}
+
+  .spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .spec{padding:15px 16px;border-radius:12px;border:1px solid var(--edge);background:var(--panel)}
+  .spec h4{font-size:14px;margin:0 0 8px;font-weight:650}
+  .spec .kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-top:1px dashed var(--edge-soft)}
+  .spec .kv:first-of-type{border-top:0}
+  .spec .kv b{font-weight:500;color:var(--text-dim)}
+  .spec .kv code{font-family:var(--mono);color:var(--code-text);font-size:11.5px}
+
+  .ramp{display:flex;flex-direction:column;gap:2px}
+  .ramp .row{display:flex;align-items:baseline;gap:16px;padding:9px 14px;border-radius:10px}
+  .ramp .row:nth-child(odd){background:var(--panel-2)}
+  .ramp .tag{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);width:130px;flex:none}
+  .ramp .samp{color:var(--text);letter-spacing:-.01em}
+
+  /* component recipes */
+  .recipes{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .recipe{padding:18px;border-radius:14px;border:1px solid var(--edge);background:var(--panel);box-shadow:var(--shadow-sm)}
+  .recipe h4{font-size:15px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+  .recipe .desc{font-size:12.5px;color:var(--text-dim);margin-bottom:12px}
+  .recipe ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+  .recipe li{font-size:12.5px;display:flex;gap:8px;align-items:flex-start}
+  .recipe li::before{content:"";width:5px;height:5px;border-radius:99px;background:var(--accent);margin-top:7px;flex:none}
+  .recipe code{font-family:var(--mono);background:var(--code-bg);color:var(--code-text);padding:1px 5px;border-radius:5px;font-size:11px}
+  .demo{margin-bottom:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{border-radius:13px;padding:11px 20px;font-weight:600;font-size:13px;border:0;font-family:inherit}
+  .btn.pri{background:linear-gradient(135deg,var(--teal-500),var(--teal-700));color:#fff;box-shadow:0 6px 16px rgba(2,195,154,.32)}
+  .btn.deep{background:var(--teal-700);color:#fff}
+  .btn.soft{background:var(--teal-50);color:var(--teal-700)}
+  .btn.ghost{background:transparent;border:1.5px solid var(--edge);color:var(--text)}
+  .sevpill{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:600}
+  .sevpill i{width:8px;height:8px;border-radius:99px}
+  .sev-major{background:#fdecec;color:#c92a2f} .sev-major i{background:var(--sev-major)}
+  .sev-mod{background:#fdf1e3;color:#b5670a} .sev-mod i{background:var(--sev-moderate)}
+  .sev-min{background:#e6f7f0;color:#0a8a63} .sev-min i{background:var(--sev-minor)}
+  .sev-unk{background:#eef2f1;color:#5c7a7d} .sev-unk i{background:var(--sev-unknown)}
+
+  /* blueprints */
+  .blueprints{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+  .bp{border:1px solid var(--edge);border-radius:16px;background:var(--panel);box-shadow:var(--shadow-sm);overflow:hidden;
+    display:flex;flex-direction:column}
+  .bp.hero-bp{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--shadow-md)}
+  .bp-head{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--edge-soft)}
+  .bp-head .idx{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .bp-head h4{font-size:16px;margin:2px 0 3px;font-weight:700;letter-spacing:-.01em}
+  .bp-head .frame{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .bp-head .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+  .bp-head .t{font-size:10.5px;background:var(--code-bg);color:var(--text-dim);padding:2px 7px;border-radius:6px;font-weight:500}
+  .chk{margin-left:auto;flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--edge);
+    background:var(--panel);cursor:pointer;display:grid;place-items:center;transition:.15s}
+  .chk:hover{border-color:var(--accent)}
+  .chk svg{width:13px;height:13px;stroke:#fff;stroke-width:3.2;fill:none;opacity:0}
+  .bp.done .chk{background:var(--accent);border-color:var(--accent)}
+  .bp.done .chk svg{opacity:1}
+  .bp.done .bp-head h4{text-decoration:line-through;text-decoration-color:var(--text-dim);opacity:.6}
+  .bp-body{padding:6px 18px 18px}
+  .bp-body .sec-b{padding:11px 0;border-top:1px dashed var(--edge-soft)}
+  .bp-body .sec-b:first-child{border-top:0}
+  .bp-body .lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+  .bp-body ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+  .bp-body li{font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start}
+  .bp-body li::before{content:"–";color:var(--text-dim);flex:none}
+  .bp-body em{color:var(--text-dim);font-style:normal;font-family:var(--mono);font-size:11px}
+
+  .footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--edge);color:var(--text-dim);font-size:13px}
+
+  /* beginner how-to */
+  kbd{font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--edge);border-bottom-width:2px;
+    border-radius:6px;padding:2px 6px;color:var(--text);white-space:nowrap}
+  .panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .panel-card{padding:14px 16px;border:1px solid var(--edge);border-radius:12px;background:var(--panel)}
+  .panel-card h4{margin:0 0 5px;font-size:13.5px;font-weight:650}
+  .panel-card h4 span{font-family:var(--mono);font-size:10.5px;color:var(--accent);font-weight:600;margin-left:6px}
+  .panel-card p{margin:0;font-size:12.5px;color:var(--text-dim)}
+  .movegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}
+  .move{padding:18px 20px;border:1px solid var(--edge);border-radius:14px;background:var(--panel);box-shadow:var(--shadow-sm)}
+  .move h4{margin:0 0 12px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;letter-spacing:-.01em}
+  .move h4 .mn{font-family:var(--mono);font-size:11px;color:#fff;background:var(--accent);border-radius:7px;padding:3px 8px;flex:none}
+  .steps{counter-reset:step;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  .steps>li{counter-increment:step;position:relative;padding-left:34px;font-size:13px;line-height:1.5}
+  .steps>li::before{content:counter(step);position:absolute;left:0;top:0;width:23px;height:23px;border-radius:7px;
+    background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-size:11.5px;font-weight:700;display:grid;place-items:center}
+  .steps>li b{font-weight:650}
+  .steps code,.move code,.tip code{font-family:var(--mono);background:var(--code-bg);color:var(--code-text);padding:1px 5px;border-radius:5px;font-size:11px}
+  .tip{margin-top:12px;font-size:12px;color:var(--text-dim);background:var(--panel-2);border-radius:9px;padding:9px 12px}
+  .tip b{color:var(--accent)}
+  .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+  .sc{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--edge);border-radius:10px;background:var(--panel);font-size:12.5px}
+  .sc kbd{flex:none}
+  @media (max-width:560px){ .progress .bar{width:80px} nav.jump{top:54px} }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="mark">℞</span> IntelliMeds · Build Playbook</div>
+    <div class="progress">
+      <span id="ptext">0 / 24 screens</span>
+      <span class="bar"><i id="pbar"></i></span>
+      <button class="themebtn" id="theme">◐ Theme</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="jump">
+    <a href="#use">How to use</a>
+    <a href="#basics">Figma basics</a>
+    <a href="#moves">Key moves</a>
+    <a href="#example">Worked example</a>
+    <a href="#global">Global specs</a>
+    <a href="#color">Color</a>
+    <a href="#type">Type</a>
+    <a href="#components">Components</a>
+    <a href="#shell">Web shell</a>
+    <a href="#web">Web screens</a>
+    <a href="#admin">Admin</a>
+    <a href="#mobile">Mobile</a>
+    <a href="#shortcuts">Shortcuts</a>
+    <a href="#order">Build order</a>
+  </nav>
+
+  <div class="hero">
+    <div class="eyebrow">Drug–drug interaction checker · design handoff</div>
+    <h1>Build the rest of IntelliMeds, on-system.</h1>
+    <p>The tokens, components, Login and Register are already in the Figma file. This is the blueprint for every remaining screen so what you build by hand matches the system exactly. Tick each screen off as you finish it — progress saves in your browser.</p>
+    <div class="deadline">⏱ Deadline: tomorrow 11:00 AM — build fastest-first, hero screen early</div>
+  </div>
+
+  <!-- HOW TO USE -->
+  <section id="use">
+    <div class="sec-head"><span class="n">00</span><h2>How to use this + who builds what</h2></div>
+    <div class="note">
+      <p style="margin:0 0 10px"><strong>Division of labour.</strong> You build in the Figma UI directly (no rate limit there — much faster). My auto-loop is throttled to ~1 screen per 20 min, so treat it as backup only. To avoid duplicate frames: <strong>as you finish a screen, tick it here</strong> and I'll skip anything already ticked when my loop wakes. If you'd rather I stop the loop entirely, just say so.</p>
+      <p style="margin:0"><strong>Golden rules.</strong> Everything uses <em>Inter</em>. Pull fills from the <strong>Color</strong> variables and text from the shared text styles — never type raw hex. Web screens are <code>1280 × 832</code> frames; mobile is <code>390 × 844</code>. Reuse the existing components (Button, SeverityBadge, SearchField, NavItem, TabBar) as instances.</p>
+    </div>
+  </section>
+
+  <!-- FIGMA BASICS -->
+  <section id="basics">
+    <div class="sec-head"><span class="n">01</span><h2>Figma basics — the screen you’re looking at</h2><span class="hint">Read this once, then refer back</span></div>
+    <p style="margin:0 0 16px;color:var(--text-dim);max-width:64ch">Figma runs in your browser or the desktop app. Open the file <em style="font-family:var(--mono)">IntelliMeds — Product Design</em> from your Figma home. The window has five areas — here’s what each one does.</p>
+    <div class="panels">
+      <div class="panel-card"><h4>Toolbar <span>top</span></h4><p>Tools + the <b>Move</b> arrow (<kbd>V</kbd>). The menu (top-left) has everything else. Zoom % is top-right.</p></div>
+      <div class="panel-card"><h4>Pages <span>top-left</span></h4><p>Click the file name area to see the 3 pages: <b>Design System</b>, <b>Web &amp; Admin</b>, <b>Mobile App</b>. Screens live on the last two.</p></div>
+      <div class="panel-card"><h4>Layers <span>left</span></h4><p>The tree of everything on the page — every frame, text and shape. Click to select; double-click a name to rename.</p></div>
+      <div class="panel-card"><h4>Assets <span>left tab</span></h4><p>Next to Layers. Your <b>components</b> (Button, SeverityBadge, TabBar…) live here — drag them onto the canvas to use them.</p></div>
+      <div class="panel-card"><h4>Design panel <span>right</span></h4><p>The most important panel. With something selected it shows position, size, <b>Fill</b> (color), <b>Stroke</b> (border), <b>Effects</b> (shadow), corner radius, and <b>Typography</b>.</p></div>
+      <div class="panel-card"><h4>Canvas <span>middle</span></h4><p>The infinite workspace. Scroll to pan, <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom, <kbd>Shift</kbd>+<kbd>1</kbd> to fit everything on screen.</p></div>
+    </div>
+    <div class="note" style="margin-top:16px">
+      <p style="margin:0"><strong>The one idea that makes Figma click:</strong> everything is a <em>layer</em>, and layers nest inside <strong>frames</strong>. A screen is just a big frame with smaller frames (cards, rows, buttons) inside it. A <strong>component</strong> is a reusable master; when you drag one out you get an <strong>instance</strong> (a linked copy). Edit the master → every instance updates. You’ll mostly place instances and duplicate frames — not draw from scratch.</p>
+    </div>
+  </section>
+
+  <!-- KEY MOVES -->
+  <section id="moves">
+    <div class="sec-head"><span class="n">02</span><h2>The moves you’ll repeat</h2><span class="hint">Ten actions cover ~90% of the build</span></div>
+    <div class="movegrid">
+      <div class="move"><h4><span class="mn">1</span>Open a page &amp; frame a screen</h4>
+        <ol class="steps">
+          <li>Switch to the <b>Web &amp; Admin</b> page (Pages list, top-left).</li>
+          <li>Press <kbd>F</kbd> (Frame tool). In the right panel’s size boxes type <b>W 1280 · H 832</b>.</li>
+          <li>Click once on empty canvas to drop the frame. Double-click its name in Layers and rename it, e.g. <code>Web / Dashboard</code>.</li>
+        </ol>
+        <div class="tip"><b>Tip:</b> leave ~80px gaps between frames so screens don’t touch.</div>
+      </div>
+      <div class="move"><h4><span class="mn">2</span>Reuse the shell by duplicating</h4>
+        <ol class="steps">
+          <li>Once your Dashboard (with sidebar + topbar) looks right, click it in Layers to select the whole frame.</li>
+          <li>Press <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>D</kbd> to duplicate, or hold <kbd>Alt</kbd> and drag it aside.</li>
+          <li>Rename the copy, then just swap the main content — the sidebar &amp; topbar are already there.</li>
+        </ol>
+        <div class="tip"><b>Why:</b> this is the fastest path. Build the shell <b>once</b>, duplicate for all 6 other logged-in screens.</div>
+      </div>
+      <div class="move"><h4><span class="mn">3</span>Auto layout (stack things neatly)</h4>
+        <ol class="steps">
+          <li>Select the items you want stacked (or an empty frame).</li>
+          <li>Press <kbd>Shift</kbd>+<kbd>A</kbd>. They snap into a row/column.</li>
+          <li>In the right panel set direction (↓ vertical), <b>gap</b> (e.g. 16), and padding. Change gap instead of nudging things by hand.</li>
+        </ol>
+        <div class="tip"><b>Use it everywhere:</b> cards, rows, nav, forms. It keeps spacing consistent and reflows when text changes.</div>
+      </div>
+      <div class="move"><h4><span class="mn">4</span>Add &amp; style text</h4>
+        <ol class="steps">
+          <li>Press <kbd>T</kbd>, click, and type (e.g. “Interaction Checker”).</li>
+          <li>With it selected, open the <b>Typography</b> section (right panel) → click the <b>style</b> icon (⋮⋮ / four dots).</li>
+          <li>Pick a shared style like <code>Heading/H1</code> or <code>Body/Base</code>. Don’t set size by hand — use the styles.</li>
+        </ol>
+      </div>
+      <div class="move"><h4><span class="mn">5</span>Apply a color (from variables)</h4>
+        <ol class="steps">
+          <li>Select a shape/frame/text. In the right panel find <b>Fill</b> (for text it’s the text color).</li>
+          <li>Click the color swatch, then the <b>library/variable icon</b> (four dots ⋮⋮) at the top of the picker.</li>
+          <li>Choose a token — <code>color/brand/primary</code>, <code>text/primary</code>, <code>severity/major</code>, etc. Never type a raw hex.</li>
+        </ol>
+        <div class="tip"><b>Border &amp; shadow:</b> use <b>Stroke</b> for a 1px <code>border/default</code> line, and <b>Effects</b> → pick the <code>Shadow/sm</code> style.</div>
+      </div>
+      <div class="move"><h4><span class="mn">6</span>Place a component instance</h4>
+        <ol class="steps">
+          <li>Open the <b>Assets</b> tab (left). You’ll see Button, SeverityBadge, SearchField, NavItem, TabBar.</li>
+          <li>Drag one onto your frame — or press <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>⇧</kbd>+<kbd>K</kbd> / use quick-insert.</li>
+          <li>To edit its text, double-click into the instance and retype the label.</li>
+        </ol>
+      </div>
+      <div class="move"><h4><span class="mn">7</span>Swap a variant (e.g. severity)</h4>
+        <ol class="steps">
+          <li>Select a component instance (single click).</li>
+          <li>In the right panel you’ll see its properties — e.g. <b>Style</b> for Button, <b>Level</b> for SeverityBadge.</li>
+          <li>Change the dropdown: <code>Level = Major</code> → <code>Moderate</code> turns the badge orange automatically.</li>
+        </ol>
+      </div>
+      <div class="move"><h4><span class="mn">8</span>Round corners, borders, shadows</h4>
+        <ol class="steps">
+          <li>Select a frame. In the right panel set <b>Corner radius</b> (cards 16, buttons 14, pills 999).</li>
+          <li><b>Stroke</b> → add, set 1px, color <code>border/default</code> for card outlines.</li>
+          <li><b>Effects</b> → “+” → switch type to the <code>Shadow/sm</code> or <code>Shadow/md</code> style.</li>
+        </ol>
+      </div>
+      <div class="move"><h4><span class="mn">9</span>Align, group, rename</h4>
+        <ol class="steps">
+          <li>Select 2+ items → use the <b>align</b> buttons (top of right panel) to center/distribute.</li>
+          <li>Group with <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>G</kbd>. Prefer auto layout over groups when things stack.</li>
+          <li>Rename layers as you go — future-you (and clean handoff) will thank you.</li>
+        </ol>
+      </div>
+      <div class="move"><h4><span class="mn">10</span>Save, undo, preview</h4>
+        <ol class="steps">
+          <li>Figma <b>auto-saves</b> to the cloud — no save button needed.</li>
+          <li><kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes anything; nothing you do is permanent.</li>
+          <li>Press <kbd>⇧</kbd>+<kbd>Space</kbd> or the ▶ Present button to preview a screen full-size.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKED EXAMPLE -->
+  <section id="example">
+    <div class="sec-head"><span class="n">03</span><h2>Worked example — build “Interaction Checker”</h2><span class="hint">Do this once; every screen follows the same rhythm</span></div>
+    <div class="card" style="padding:22px 24px">
+      <ol class="steps">
+        <li><b>Frame it.</b> On the <b>Web &amp; Admin</b> page, press <kbd>F</kbd>, set <b>1280×832</b>, drop it, rename <code>Web / Interaction Checker</code>. Set its Fill to <code>color/bg/canvas</code> (paper).</li>
+        <li><b>Bring the shell.</b> Duplicate your finished Dashboard frame (move #2) and rename it — you now have the sidebar + topbar for free. In the sidebar, set the <b>Interaction Checker</b> NavItem instance to <code>State = Active</code> and Dashboard back to Default.</li>
+        <li><b>Fix the topbar text.</b> Title → “Interaction Checker” (<code>Heading/H1</code>). Subtitle → “Add medications to check for interactions” (<code>Body/Base</code>, <code>text/secondary</code>).</li>
+        <li><b>Delete old content.</b> Remove the Dashboard’s stat cards/panels from the main area, leaving the padded content column (an auto-layout frame).</li>
+        <li><b>Add the search card.</b> Draw a frame, Fill <code>bg/surface</code>, radius 18, 1px <code>border/default</code>, <code>Shadow/sm</code>, padding 24. Give it vertical auto layout (move #3), gap 16.</li>
+        <li><b>Drop a SearchField.</b> From Assets, drag a <b>SearchField</b> instance into that card. It already says “Search medications…”.</li>
+        <li><b>Add med chips.</b> Make a small horizontal auto-layout frame (gap 8). Inside, add pill frames (radius 999, Fill <code>bg/soft</code>, padding 8×14) each with a label like “Warfarin” + a small “✕”. Duplicate for “Aspirin”, “Lisinopril”.</li>
+        <li><b>Add the action.</b> From Assets, drag a <b>Button</b>, set <code>Style = Primary</code>, label “Check interactions”. Make it full width (select it → set horizontal resizing to <b>Fill</b>).</li>
+        <li><b>Add a helper panel.</b> Beside/below, a second surface card titled “How it works” (<code>Heading/H3</code>) with three short steps in <code>Body/Base</code>.</li>
+        <li><b>Tidy spacing.</b> Confirm the content column’s auto-layout gap is 28 so sections breathe. Nudge nothing by hand.</li>
+        <li><b>Review.</b> Press <kbd>⇧</kbd>+<kbd>Space</kbd> to preview. Compare against its blueprint card in the “Web · Patient screens” list below.</li>
+        <li><b>Tick it off.</b> Mark “Interaction Checker” done in this playbook so my background loop skips it.</li>
+      </ol>
+      <div class="tip" style="margin-top:16px"><b>That’s the whole rhythm:</b> frame → duplicate shell → set the active nav → swap the title → build the content from surface cards + component instances + auto layout, all colored from variables. Every remaining screen is a variation on these steps.</div>
+    </div>
+  </section>
+
+  <!-- GLOBAL -->
+  <section id="global">
+    <div class="sec-head"><span class="n">04</span><h2>Global specs</h2><span class="hint">Frames · grid · elevation</span></div>
+    <div class="spec-grid">
+      <div class="spec"><h4>Canvas</h4>
+        <div class="kv"><b>Web frame</b><code>1280 × 832</code></div>
+        <div class="kv"><b>Mobile frame</b><code>390 × 844</code></div>
+        <div class="kv"><b>Grid gap between frames</b><code>80 px</code></div>
+        <div class="kv"><b>Page bg</b><code>color/bg/canvas</code></div>
+      </div>
+      <div class="spec"><h4>Spacing scale</h4>
+        <div class="kv"><b>xs / sm / md</b><code>4 · 8 · 12</code></div>
+        <div class="kv"><b>lg / xl</b><code>16 · 24</code></div>
+        <div class="kv"><b>2xl / 3xl / 4xl</b><code>32 · 48 · 64</code></div>
+        <div class="kv"><b>Card padding</b><code>22–24</code></div>
+      </div>
+      <div class="spec"><h4>Radius</h4>
+        <div class="kv"><b>Inputs / buttons</b><code>13–14</code></div>
+        <div class="kv"><b>Cards / panels</b><code>16–18</code></div>
+        <div class="kv"><b>Banners</b><code>22–24</code></div>
+        <div class="kv"><b>Pills / avatars</b><code>999</code></div>
+      </div>
+      <div class="spec"><h4>Elevation</h4>
+        <div class="kv"><b>Card</b><code>Shadow/sm</code></div>
+        <div class="kv"><b>Raised panel</b><code>Shadow/md</code></div>
+        <div class="kv"><b>Modal / FAB</b><code>Shadow/lg · brand</code></div>
+        <div class="kv"><b>Border</b><code>1px color/border</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLOR -->
+  <section id="color">
+    <div class="sec-head"><span class="n">05</span><h2>Color tokens</h2><span class="hint">Brand accent + semantic severity (kept separate)</span></div>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#02c39a"></div><div class="meta"><div class="nm">Primary</div><div class="hex">#02c39a</div><div class="tok">brand/primary</div></div></div>
+      <div class="sw"><div class="chip" style="background:#028090"></div><div class="meta"><div class="nm">Deep</div><div class="hex">#028090</div><div class="tok">brand/deep</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e6faf6"></div><div class="meta"><div class="nm">Soft</div><div class="hex">#e6faf6</div><div class="tok">bg/soft</div></div></div>
+      <div class="sw"><div class="chip" style="background:#0b1f22"></div><div class="meta"><div class="nm">Ink</div><div class="hex">#0b1f22</div><div class="tok">text/primary</div></div></div>
+      <div class="sw"><div class="chip" style="background:#5c7a7d"></div><div class="meta"><div class="nm">Muted</div><div class="hex">#5c7a7d</div><div class="tok">text/secondary</div></div></div>
+      <div class="sw"><div class="chip" style="background:#eef4f2"></div><div class="meta"><div class="nm">Paper</div><div class="hex">#eef4f2</div><div class="tok">bg/canvas</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ffffff;border-bottom:1px solid var(--edge)"></div><div class="meta"><div class="nm">Surface</div><div class="hex">#ffffff</div><div class="tok">bg/surface</div></div></div>
+      <div class="sw"><div class="chip" style="background:#dfeae7"></div><div class="meta"><div class="nm">Line</div><div class="hex">#dfeae7</div><div class="tok">border/default</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e5484d"></div><div class="meta"><div class="nm">Major</div><div class="hex">#e5484d</div><div class="tok">severity/major</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e8890c"></div><div class="meta"><div class="nm">Moderate</div><div class="hex">#e8890c</div><div class="tok">severity/moderate</div></div></div>
+      <div class="sw"><div class="chip" style="background:#12b886"></div><div class="meta"><div class="nm">Minor · Safe</div><div class="hex">#12b886</div><div class="tok">severity/minor</div></div></div>
+      <div class="sw"><div class="chip" style="background:#5c7a7d"></div><div class="meta"><div class="nm">Unknown</div><div class="hex">#5c7a7d</div><div class="tok">severity/unknown</div></div></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-top:12px">Severity backgrounds (tint chips &amp; banners): Major <code style="font-family:var(--mono)">#fdecec</code> · Moderate <code style="font-family:var(--mono)">#fdf1e3</code> · Minor <code style="font-family:var(--mono)">#e6f7f0</code>. The gradient (primary→deep, 135°) is for the primary button, logo mark, hero banners and the mobile FAB only.</p>
+  </section>
+
+  <!-- TYPE -->
+  <section id="type">
+    <div class="sec-head"><span class="n">06</span><h2>Type ramp — Inter</h2><span class="hint">Use the shared text styles</span></div>
+    <div class="card" style="padding:8px 10px">
+      <div class="ramp">
+        <div class="row"><span class="tag">Display · 40 · Bold</span><span class="samp" style="font-size:32px;font-weight:800;letter-spacing:-.03em">Know before you dose</span></div>
+        <div class="row"><span class="tag">H1 · 32 · Bold</span><span class="samp" style="font-size:26px;font-weight:800;letter-spacing:-.02em">Interaction Checker</span></div>
+        <div class="row"><span class="tag">H2 · 24 · SemiBold</span><span class="samp" style="font-size:21px;font-weight:650;letter-spacing:-.01em">Today’s reminders</span></div>
+        <div class="row"><span class="tag">H3 · 20 · SemiBold</span><span class="samp" style="font-size:18px;font-weight:650">Recent checks</span></div>
+        <div class="row"><span class="tag">Body L · 17 · Regular</span><span class="samp" style="font-size:16px">Add two medications to check.</span></div>
+        <div class="row"><span class="tag">Body · 15 · Regular</span><span class="samp" style="font-size:15px">Checked today · with food</span></div>
+        <div class="row"><span class="tag">Label · 13 · Medium</span><span class="samp" style="font-size:13px;font-weight:500">Email address</span></div>
+        <div class="row"><span class="tag">Caption · 12 · Regular</span><span class="samp" style="font-size:12px;color:var(--text-dim)">9:00 AM</span></div>
+        <div class="row"><span class="tag">Eyebrow · 11 · SB · +8%</span><span class="samp" style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)">Welcome back</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENTS -->
+  <section id="components">
+    <div class="sec-head"><span class="n">07</span><h2>Component recipes</h2><span class="hint">Drop instances, don’t rebuild</span></div>
+    <div class="recipes">
+      <div class="recipe"><h4>Button</h4><div class="desc">4 style variants · radius 14 · pad 15×28</div>
+        <div class="demo"><span class="btn pri">Check interaction</span><span class="btn ghost">Cancel</span></div>
+        <ul><li><b>Primary</b>: gradient 135° teal‑500→700, white text, Shadow/brand</li><li><b>Deep</b>: solid teal‑700 · <b>Soft</b>: teal‑50 bg + teal‑700 text</li><li><b>Ghost</b>: transparent, <code>1.5px</code> line border, ink text</li></ul>
+      </div>
+      <div class="recipe"><h4>SeverityBadge</h4><div class="desc">Pill · dot + label · bound to severity tokens</div>
+        <div class="demo"><span class="sevpill sev-major"><i></i>Major</span><span class="sevpill sev-mod"><i></i>Moderate</span><span class="sevpill sev-min"><i></i>Safe</span><span class="sevpill sev-unk"><i></i>Unknown</span></div>
+        <ul><li>Tinted bg + solid dot/text in the matching severity hue</li><li>Radius <code>999</code>, pad <code>8×16</code>, gap <code>8</code></li></ul>
+      </div>
+      <div class="recipe"><h4>SearchField</h4><div class="desc">Height 52 · radius 14</div>
+        <ul><li>White fill, <code>1.5px</code> line border, magnifier glyph left</li><li>Placeholder in <code>text/secondary</code>; focus = teal‑500 border</li><li>Used on Checker, Drug Database, Admin tables</li></ul>
+      </div>
+      <div class="recipe"><h4>Card / Panel</h4><div class="desc">Surface container</div>
+        <ul><li>White fill, <code>1px</code> line border, radius <code>16–18</code>, Shadow/sm</li><li>Inner padding <code>22–24</code>; section title = H3</li><li>Stat card: dot + big number (Display/H1) + caption label</li></ul>
+      </div>
+      <div class="recipe"><h4>Sidebar NavItem</h4><div class="desc">Active / Default</div>
+        <ul><li>Row: 20px icon + Medium 15 label, pad <code>12×14</code>, radius 12</li><li><b>Active</b>: teal‑50 bg, teal‑700 icon+label · <b>Default</b>: muted</li></ul>
+      </div>
+      <div class="recipe"><h4>TabBar + FAB</h4><div class="desc">Mobile only · height 88 + FAB</div>
+        <ul><li>White bar, top shadow, 4 tabs + raised center gradient FAB (64px)</li><li>FAB = the Check action; white 4px ring, plus glyph, “Check” caption</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEB SHELL -->
+  <section id="shell">
+    <div class="sec-head"><span class="n">08</span><h2>Web app shell</h2><span class="hint">Reuse for every logged‑in web screen</span></div>
+    <div class="note">
+      <p style="margin:0 0 8px"><strong>Sidebar — 248px, white, right border.</strong> Logo (gradient mark + “IntelliMeds”), then NavItems in this order: Dashboard · Interaction Checker · Drug Database · Reminders · Doctors · AI Assistant · Profile. Active item highlighted per current screen. Pin the signed‑in user chip to the bottom.</p>
+      <p style="margin:0"><strong>Main — remaining 1032px, paper bg, 40px padding.</strong> Topbar row = page H1 + one‑line muted subtitle on the left, 44px avatar (teal ring) on the right. Content stacks below with 28px gaps. <em>Duplicate the Dashboard frame as your template for the other web screens — the shell comes for free.</em></p>
+    </div>
+  </section>
+
+  <!-- WEB SCREENS -->
+  <section id="web">
+    <div class="sec-head"><span class="n">09</span><h2>Web · Patient screens</h2><span class="hint">13 frames · shell + content</span></div>
+    <div class="blueprints" id="bp-web"></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="admin">
+    <div class="sec-head"><span class="n">10</span><h2>Admin screens</h2><span class="hint">3 frames · data‑dense, add “Admin” to sidebar</span></div>
+    <div class="blueprints" id="bp-admin"></div>
+  </section>
+
+  <!-- MOBILE -->
+  <section id="mobile">
+    <div class="sec-head"><span class="n">11</span><h2>Mobile app</h2><span class="hint">390×844 · 5‑tab + flows</span></div>
+    <div class="blueprints" id="bp-mobile"></div>
+  </section>
+
+  <!-- SHORTCUTS -->
+  <section id="shortcuts">
+    <div class="sec-head"><span class="n">12</span><h2>Shortcut cheat card</h2><span class="hint">⌘ on Mac · Ctrl on Windows</span></div>
+    <div class="sc-grid">
+      <div class="sc"><kbd>V</kbd> Move / select</div>
+      <div class="sc"><kbd>F</kbd> New frame</div>
+      <div class="sc"><kbd>T</kbd> Text</div>
+      <div class="sc"><kbd>R</kbd> Rectangle</div>
+      <div class="sc"><kbd>Shift</kbd>+<kbd>A</kbd> Auto layout</div>
+      <div class="sc"><kbd>⌘</kbd>+<kbd>D</kbd> Duplicate</div>
+      <div class="sc"><kbd>Alt</kbd>+drag Copy</div>
+      <div class="sc"><kbd>⌘</kbd>+<kbd>G</kbd> Group</div>
+      <div class="sc"><kbd>⌘</kbd>+<kbd>Z</kbd> Undo</div>
+      <div class="sc"><kbd>Shift</kbd>+<kbd>1</kbd> Fit all</div>
+      <div class="sc"><kbd>Shift</kbd>+<kbd>2</kbd> Zoom selection</div>
+      <div class="sc"><kbd>Shift</kbd>+<kbd>Space</kbd> Preview</div>
+      <div class="sc"><kbd>⌘</kbd>+scroll Zoom</div>
+      <div class="sc"><kbd>Space</kbd>+drag Pan</div>
+      <div class="sc"><kbd>⌘</kbd>+<kbd>/</kbd> Search actions</div>
+      <div class="sc"><kbd>Enter</kbd> Go inside a frame</div>
+    </div>
+  </section>
+
+  <!-- ORDER -->
+  <section id="order">
+    <div class="sec-head"><span class="n">13</span><h2>Suggested build order</h2><span class="hint">Highest‑impact first</span></div>
+    <div class="spec-grid">
+      <div class="spec"><h4>1 · Prove the shell (30 min)</h4>
+        <div class="kv"><b>Dashboard</b><code>template</code></div>
+        <div class="kv"><b>Interaction Checker</b><code>reuse shell</code></div>
+        <div class="kv"><b>Interaction Result</b><code>the hero ★</code></div>
+      </div>
+      <div class="spec"><h4>2 · Core patient (60 min)</h4>
+        <div class="kv"><b>Drug Database → Detail</b><code>pair</code></div>
+        <div class="kv"><b>Reminders · Doctors</b><code></code></div>
+        <div class="kv"><b>AI Assistant · Profile</b><code></code></div>
+      </div>
+      <div class="spec"><h4>3 · Secondary (40 min)</h4>
+        <div class="kv"><b>History · Appointments</b><code></code></div>
+        <div class="kv"><b>Education · Notifications</b><code></code></div>
+      </div>
+      <div class="spec"><h4>4 · Admin + Mobile (60 min)</h4>
+        <div class="kv"><b>3 admin tables</b><code>reuse table</code></div>
+        <div class="kv"><b>5 tabs + 3 flows</b><code>reuse TabBar</code></div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:16px">Batch by pattern, not by list order: build one great card / table / chat bubble, then duplicate and re‑label. The severity color is the only thing that changes between most interaction rows.</p>
+  </section>
+
+  <div class="footer">
+    IntelliMeds design handoff · matches file <em style="font-family:var(--mono)">IntelliMeds — Product Design</em>. Ticks are saved locally in this browser. Build with the shared variables &amp; text styles so a later theme swap stays clean.
+  </div>
+</div>
+
+<script>
+const WEB=[
+ ["D1","Dashboard","1280×832 · shell",["Shell","Stat cards","CTA"],[
+   ["Topbar","“Good morning, Sarah” H1 + “Here’s your medication overview for today”. Avatar right."],
+   ["Stat row (4 cards)","8 Active medications · 2 Interactions flagged · 3 Reminders today · 1 Upcoming appointment. Each: colored dot, big number, label."],
+   ["CTA banner","Gradient card ‘Check a new interaction’ + subcopy + white ‘Open checker’ button."],
+   ["Two panels","Recent checks (rows with SeverityBadge: Warfarin+Aspirin Major, Lisinopril+Ibuprofen Moderate, Metformin+Vit D Safe) · Today’s reminders (pill icon, name+dose, time, check circle)."]]],
+ ["D2","Interaction Checker","input screen",["Search","Chips","Action"],[
+   ["Header","“Interaction Checker” + “Add medications to check for interactions”."],
+   ["Add card","Large SearchField ‘Search medications…’. Below: added‑med chips (Warfarin ✕, Aspirin ✕, Lisinopril ✕) — pill w/ name + remove."],
+   ["Primary action","Full‑width gradient ‘Check interactions’ button (disabled until 2+ meds)."],
+   ["Side / below","‘Your medication list’ panel or 3‑step ‘How it works’. Empty hint when <2 meds."]]],
+ ["D3","Interaction Result","★ HERO",["Severity banner","Do/Don’t","Actions"],[
+   ["Severity banner","Full‑width card tinted by WORST severity — Major: bg #fdecec, red left stripe, alert icon, ‘Major interaction’ + pair ‘Warfarin + Aspirin’ + SeverityBadge."],
+   ["Plain‑language summary","One sentence: what happens & why it matters (bleeding‑risk example)."],
+   ["AI care plan (2 col)","‘Do’ card — green checks (space doses, monitor for bruising…) · ‘Don’t’ card — red marks (don’t stop without your doctor…)."],
+   ["Recommended actions","‘Talk to your doctor’ CTA + secondary ‘Save to history’. Severity legend + disclaimer ‘Not a substitute for medical advice.’"]]],
+ ["D4","Drug Database","browse",["Search","Filters","List"],[
+   ["Search + filters","Prominent SearchField + filter chips: All · Cardiovascular · Antibiotics · Pain · Diabetes."],
+   ["Drug list / grid","Cards: drug name (H3), generic/brand, class tag pill, chevron. e.g. Warfarin (Anticoagulant), Lisinopril (ACE inhibitor), Metformin (Antidiabetic), Ibuprofen (NSAID)."],
+   ["Grouping","Alphabetical or by class; sticky letter headers optional."]]],
+ ["D5","Drug Detail","record",["Header","Interactions","Meta"],[
+   ["Header","Drug name H1, generic name muted, class badge. ‘Add to my meds’ primary button."],
+   ["Known interactions","List of interacting drugs each w/ SeverityBadge (Aspirin – Major, Ibuprofen – Moderate…)."],
+   ["Sections","Overview · Typical dosage · Common side effects · Warnings. Simple label/value or short paragraphs."]]],
+ ["D6","Reminders","schedule",["Timeline","Adherence"],[
+   ["Header + add","‘Reminders’ H1 + ‘Add reminder’ button (top‑right)."],
+   ["Day timeline","Grouped Morning / Afternoon / Evening; rows: pill icon, name+dose, time, ‘taken’ check toggle."],
+   ["Adherence","Stat card ‘92% this week’ + tiny 7‑bar week chart."]]],
+ ["D7","Doctors","contacts",["Cards"],[
+   ["Header + add","‘My doctors’ + ‘Add doctor’."],
+   ["Doctor cards","Avatar, name, specialty, next appointment date, actions ‘Message’ / ‘Call’. e.g. Dr. Emily Rodriguez — Cardiology; Dr. James Park — General."]]],
+ ["D8","AI Assistant","chat",["Thread","Input"],[
+   ["Header","AI avatar + ‘IntelliMeds Assistant’ + small disclaimer line."],
+   ["Message thread","AI bubbles left (teal‑50 tint), user bubbles right (ink). Include a med‑safety Q&A example."],
+   ["Suggested prompts","Chips: ‘Is ibuprofen safe with my meds?’ · ‘Explain my last result’."],
+   ["Input bar","Rounded field + gradient send button, pinned bottom."]]],
+ ["D9","Profile","account",["Header","Sections"],[
+   ["Header","Large avatar, name, email, ‘Edit profile’ ghost button."],
+   ["Info blocks","Personal info · Health info (allergies, conditions) · Medications count."],
+   ["Settings list","Notifications · Privacy · Language rows w/ chevrons; ‘Sign out’ in severity/major text."]]],
+ ["D10","Medication History","log",["Table/timeline"],[
+   ["Header + filter","‘History’ + month filter."],
+   ["Entries","Table/timeline: Date · Medications · Result (SeverityBadge) · action link. Reuse the interaction row pattern."]]],
+ ["D11","Appointments","calendar",["Upcoming","Past"],[
+   ["Header + add","‘Appointments’ + ‘Book appointment’."],
+   ["Appointment cards","Doctor, date/time, location, status pill (Upcoming teal / Completed muted). Split Upcoming vs Past."]]],
+ ["D12","Education","content",["Featured","Grid"],[
+   ["Featured","Hero article card w/ gradient banner, category tag, title, read‑time."],
+   ["Article grid","Cards: banner, category, title, ‘4 min read’. Topics: ‘Understanding drug interactions’, ‘Managing multiple meds’, ‘Reading a severity rating’."]]],
+ ["D13","Notifications","inbox",["Grouped list"],[
+   ["Header","‘Notifications’ + ‘Mark all read’."],
+   ["Grouped list","Today / Earlier. Rows: type icon (interaction alert = red, reminder = teal, appointment, system), title, body, timestamp, unread dot."]]],
+];
+const ADMIN=[
+ ["A1","Admin · Dashboard","1280×832 · admin shell",["KPIs","Charts","Activity"],[
+   ["Admin sidebar","Dashboard · User Management · Drug Management + ‘Admin’ badge on logo."],
+   ["KPI cards","Total users · Active today · Drugs in DB · Interactions checked — each with trend delta."],
+   ["Charts","Usage over time (teal area chart w/ faint grid + emphasized endpoint) + severity distribution (major/moderate/minor split)."],
+   ["Recent activity","Compact table of latest checks / signups."]]],
+ ["A2","User Management","table",["Search","Table","Pager"],[
+   ["Toolbar","SearchField + role filter + ‘Invite user’."],
+   ["Table","Columns: User (avatar+name) · Email · Role pill (Patient/Professional) · Status (Active/Suspended) · Joined · ⋯ actions."],
+   ["Footer","Row count + pagination."]]],
+ ["A3","Drug Management","table",["Search","Table"],[
+   ["Toolbar","SearchField + ‘Add drug’ primary."],
+   ["Table","Columns: Drug · Class · Interactions count · Last updated · Edit/Delete actions. Reuse the User table pattern."]]],
+];
+const MOBILE=[
+ ["M1","Mobile · Home","390×844 · TabBar",["Greeting","CTA","Lists"],[
+   ["Top","Greeting + small avatar; quick stat pills (meds, flags)."],
+   ["CTA card","Gradient ‘Check interaction’ card."],
+   ["Lists","Today’s reminders (rows + check) · Recent checks (SeverityBadge). TabBar: Home active."]]],
+ ["M2","Mobile · Reminders","TabBar",["Timeline","Ring"],[
+   ["Header","‘Reminders’ + add (＋) top‑right."],
+   ["Timeline","Morning/Afternoon/Evening rows w/ taken toggle."],
+   ["Adherence ring","Circular % + this‑week dots. TabBar: Reminders active."]]],
+ ["M3","Mobile · Check","FAB destination",["Search","Chips","Action"],[
+   ["Content","SearchField + added‑med chips + full‑width gradient ‘Check interactions’."],
+   ["Note","This is where the center FAB lands. TabBar FAB emphasized."]]],
+ ["M4","Mobile · Doctors","TabBar",["Cards"],[
+   ["List","Stacked doctor cards: avatar, name, specialty, Call/Message. TabBar: Doctors active."]]],
+ ["M5","Mobile · Profile","TabBar",["Header","Settings"],[
+   ["Header","Avatar, name, email."],
+   ["Settings","Grouped rows + Sign out. TabBar: Profile active."]]],
+ ["M6","Mobile · Check Result","flow",["Banner","Plan"],[
+   ["Severity banner","Full‑width tinted banner (worst severity) + pair + badge — mobile version of the hero."],
+   ["Care plan","Stacked Do / Don’t cards + ‘Talk to your doctor’. Back chevron top‑left."]]],
+ ["M7","Mobile · Drug Detail","flow",["Header","Interactions"],[
+   ["Header","Drug name, class badge, ‘Add to my meds’."],
+   ["Interactions","Scrolling list w/ SeverityBadges + sections."]]],
+ ["M8","Mobile · AI Assistant","flow",["Thread","Input"],[
+   ["Chat","AI/user bubbles + suggested‑prompt chips."],
+   ["Input","Rounded field + gradient send, pinned above safe area."]]],
+];
+const CHK='<svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>';
+function render(list,el){
+  document.getElementById(el).innerHTML=list.map(s=>{
+    const [id,name,frame,tags,secs]=s;
+    const isHero=/HERO/.test(frame);
+    const body=secs.map(sec=>`<div class="sec-b"><div class="lbl">${sec[0]}</div><ul><li>${sec[1]}</li></ul></div>`).join('');
+    const tg=tags.map(t=>`<span class="t">${t}</span>`).join('');
+    return `<div class="bp${isHero?' hero-bp':''}" data-id="${id}">
+      <div class="bp-head">
+        <div><div class="idx">${id}</div><h4>${name}</h4><div class="frame">${frame}</div><div class="tags">${tg}</div></div>
+        <div class="chk" role="checkbox" aria-checked="false" tabindex="0" aria-label="Mark ${name} done">${CHK}</div>
+      </div>
+      <div class="bp-body">${body}</div></div>`;
+  }).join('');
+}
+render(WEB,'bp-web'); render(ADMIN,'bp-admin'); render(MOBILE,'bp-mobile');
+
+const KEY='intellimeds-build-done';
+let done=JSON.parse(localStorage.getItem(KEY)||'{}');
+const total=document.querySelectorAll('.bp').length;
+function paint(){
+  let n=0;
+  document.querySelectorAll('.bp').forEach(bp=>{
+    const on=!!done[bp.dataset.id];
+    bp.classList.toggle('done',on);
+    bp.querySelector('.chk').setAttribute('aria-checked',on);
+    if(on)n++;
+  });
+  document.getElementById('ptext').textContent=n+' / '+total+' screens';
+  document.getElementById('pbar').style.width=(total? (n/total*100):0)+'%';
+}
+function toggle(bp){ const id=bp.dataset.id; done[id]=!done[id]; if(!done[id])delete done[id]; localStorage.setItem(KEY,JSON.stringify(done)); paint(); }
+document.querySelectorAll('.bp').forEach(bp=>{
+  const chk=bp.querySelector('.chk');
+  chk.addEventListener('click',()=>toggle(bp));
+  chk.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle(bp);} });
+});
+paint();
+
+// theme toggle
+const root=document.documentElement;
+document.getElementById('theme').addEventListener('click',()=>{
+  const cur=root.getAttribute('data-theme')|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  root.setAttribute('data-theme',cur==='dark'?'light':'dark');
+});
+</script>

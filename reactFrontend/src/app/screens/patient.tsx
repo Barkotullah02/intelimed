@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Shell } from '../AppShell'
 import { Button, Card, StatCard, SeverityBadge, SearchField, Avatar } from '../ui'
 import {
@@ -6,31 +6,83 @@ import {
   IconArrowLeft, IconPhone, IconMessage, IconSend, IconBell, IconCalendar, IconLogout,
 } from '../icons'
 import {
-  DRUGS, REMINDERS, DOCTORS, ARTICLES, findInteraction, SEVERITY_LABEL,
-  type Interaction, type Severity,
+  ARTICLES, SEVERITY_LABEL,
+  type Severity,
 } from '../data'
+import { useDrugs } from '../useApi'
+import { useAuth } from '../auth/AuthContext'
+import { drugApi, interactionApi, aiApi, doctorApi, reminderApi } from '../../api/services'
+import type { InteractionCheckResponse, DrugInteractionSummary, DoctorResponse, ReminderResponse, InteractionHistory } from '../../api/types'
 
-/* ---------- tiny shared selection store for the checker → result flow ---------- */
-function saveSelection(ids: string[]) { sessionStorage.setItem('im-check', JSON.stringify(ids)) }
-function loadSelection(): string[] {
+/* ---------- shared selection store for the checker → result flow ---------- */
+type PickedDrug = { id: string; name: string }
+function saveSelection(drugs: PickedDrug[]) { sessionStorage.setItem('im-check', JSON.stringify(drugs)) }
+function loadSelection(): PickedDrug[] {
   try { return JSON.parse(sessionStorage.getItem('im-check') || '[]') } catch { return [] }
+}
+
+/** Backend severities are UPPERCASE; the UI severity type is lowercase. */
+function toSeverity(s: string): Severity {
+  const v = (s || '').toLowerCase()
+  return v === 'major' || v === 'moderate' || v === 'minor' ? v : 'unknown'
+}
+
+/** Read a query param from the hash, e.g. `#/app/drug?id=abc`. */
+function hashParam(name: string): string | null {
+  const q = location.hash.split('?')[1]
+  return q ? new URLSearchParams(q).get(name) : null
+}
+
+function initialsFrom(name: string): string {
+  const p = name.trim().split(/\s+/)
+  return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase() || '—'
+}
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (isNaN(then)) return ''
+  const s = Math.max(0, (Date.now() - then) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
 }
 
 /* ============================ Dashboard ============================ */
 export function Dashboard() {
+  const { user } = useAuth()
+  const [history, setHistory] = useState<InteractionHistory[]>([])
+  const [reminders, setReminders] = useState<ReminderResponse[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      interactionApi.history().catch(() => []),
+      reminderApi.list().catch(() => []),
+    ]).then(([h, r]) => {
+      if (!alive) return
+      setHistory(h); setReminders(r); setLoaded(true)
+    })
+    return () => { alive = false }
+  }, [])
+
+  const flagged = history.filter((h) => ['MAJOR', 'MODERATE'].includes((h.highestSeverity || '').toUpperCase())).length
+  const firstName = user?.name?.split(' ')[0] ?? 'there'
+
   return (
-    <Shell active="dashboard" title="Good morning, Sarah" sub="Here’s your medication overview for today">
+    <Shell active="dashboard" title={`Welcome, ${firstName}`} sub="Here’s your medication overview">
       <div className="im-grid-4">
-        <StatCard value="8" label="Active medications" tone="brand" />
-        <StatCard value="2" label="Interactions flagged" tone="moderate" />
-        <StatCard value="3" label="Reminders today" tone="brand" />
-        <StatCard value="1" label="Upcoming appointment" tone="minor" />
+        <StatCard value={String(reminders.length)} label="Active reminders" tone="brand" />
+        <StatCard value={String(flagged)} label="Interactions flagged" tone="moderate" />
+        <StatCard value={String(history.length)} label="Checks run" tone="brand" />
+        <StatCard value="—" label="Upcoming appointment" tone="minor" />
       </div>
 
       <div className="im-cta">
         <div className="im-cta__text">
           <h2>Check a new interaction</h2>
-          <p>Add two or more medications to get an instant severity rating and AI care plan.</p>
+          <p>Add two or more medications to get an instant severity rating.</p>
         </div>
         <a href="#/app/checker"><Button variant="soft">Open checker</Button></a>
       </div>
@@ -38,17 +90,22 @@ export function Dashboard() {
       <div className="im-cols-2">
         <Card>
           <div className="im-panel-title">Recent checks</div>
-          <CheckRow drugs="Warfarin + Aspirin" level="major" />
-          <CheckRow drugs="Lisinopril + Ibuprofen" level="moderate" />
-          <CheckRow drugs="Metformin + Vitamin D" level="minor" />
+          {!loaded && <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>Loading…</p>}
+          {loaded && history.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>No checks yet — try the interaction checker.</p>}
+          {history.slice(0, 5).map((h) => (
+            <div className="im-listrow" key={h.id}>
+              <span className="im-listrow__grow"><b>{h.resultSummary}</b><small>{relativeTime(h.checkedAt)}</small></span>
+              <SeverityBadge level={toSeverity(h.highestSeverity)} />
+            </div>
+          ))}
         </Card>
         <Card>
-          <div className="im-panel-title">Today’s reminders</div>
-          {REMINDERS.slice(0, 3).map((r) => (
-            <div className="im-listrow" key={r.name}>
+          <div className="im-panel-title">Your reminders</div>
+          {loaded && reminders.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>No reminders set.</p>}
+          {reminders.slice(0, 4).map((r) => (
+            <div className="im-listrow" key={r.id}>
               <span className="im-pillicon"><IconPill width={18} height={18} /></span>
-              <span className="im-listrow__grow"><b>{r.name}</b><small>{r.time}{r.note ? ` · ${r.note}` : ''}</small></span>
-              <span className={`im-check${r.taken ? ' im-check--on' : ''}`}>{r.taken && <IconCheck width={13} height={13} />}</span>
+              <span className="im-listrow__grow"><b>{r.drugName}</b><small>{r.reminderTime}{r.dosage ? ` · ${r.dosage}` : ''}</small></span>
             </div>
           ))}
         </Card>
@@ -56,47 +113,53 @@ export function Dashboard() {
     </Shell>
   )
 }
-function CheckRow({ drugs, level }: { drugs: string; level: Severity }) {
-  return (
-    <div className="im-listrow">
-      <span className="im-listrow__grow"><b>{drugs}</b><small>Checked today</small></span>
-      <SeverityBadge level={level} />
-    </div>
-  )
-}
 
 /* ============================ Interaction Checker ============================ */
 export function Checker() {
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<string[]>(loadSelection())
-  const results = useMemo(
-    () => DRUGS.filter((d) => !selected.includes(d.id) && d.name.toLowerCase().includes(query.toLowerCase())).slice(0, 5),
-    [query, selected],
-  )
-  function add(id: string) { setSelected((s) => [...s, id]); setQuery('') }
-  function remove(id: string) { setSelected((s) => s.filter((x) => x !== id)) }
+  const [selected, setSelected] = useState<PickedDrug[]>(loadSelection())
+  const [results, setResults] = useState<PickedDrug[]>([])
+  const [searching, setSearching] = useState(false)
+
+  // Debounced live search against the real drug catalogue.
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) { setResults([]); return }
+    setSearching(true)
+    const t = setTimeout(() => {
+      drugApi.search(q)
+        .then((rows) => setResults(rows.map((d) => ({ id: d.id, name: d.brandName || d.genericName }))))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const suggestions = results.filter((r) => !selected.some((s) => s.id === r.id)).slice(0, 8)
+
+  function add(d: PickedDrug) { setSelected((s) => [...s, d]); setQuery('') }
+  function remove(id: string) { setSelected((s) => s.filter((x) => x.id !== id)) }
   function run() { saveSelection(selected); location.hash = '#/app/result' }
 
   return (
     <Shell active="checker" title="Interaction Checker" sub="Add medications to check for interactions">
       <div className="im-cols-2">
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <SearchField value={query} onChange={setQuery} />
-          {query && (
+          <SearchField value={query} onChange={setQuery} placeholder="Search 1,900+ medications…" />
+          {query.trim().length >= 2 && (
             <div className="im-suggest">
-              {results.map((d) => (
-                <button key={d.id} onClick={() => add(d.id)}>
-                  <span>{d.name}</span><small>{d.drugClass}</small>
+              {suggestions.map((d) => (
+                <button key={d.id} onClick={() => add(d)}>
+                  <span>{d.name}</span>
                 </button>
               ))}
-              {results.length === 0 && <button disabled>No matches</button>}
+              {suggestions.length === 0 && <button disabled>{searching ? 'Searching…' : 'No matches'}</button>}
             </div>
           )}
           <div className="im-chips">
-            {selected.map((id) => {
-              const d = DRUGS.find((x) => x.id === id)!
-              return <span className="im-chip" key={id}>{d.name}<button onClick={() => remove(id)} aria-label={`Remove ${d.name}`}><IconClose width={14} height={14} /></button></span>
-            })}
+            {selected.map((d) => (
+              <span className="im-chip" key={d.id}>{d.name}<button onClick={() => remove(d.id)} aria-label={`Remove ${d.name}`}><IconClose width={14} height={14} /></button></span>
+            ))}
             {selected.length === 0 && <span style={{ color: 'var(--muted)', fontSize: 14 }}>No medications added yet.</span>}
           </div>
           <Button block disabled={selected.length < 2} onClick={run} leftIcon={<IconShield width={18} height={18} />}>
@@ -109,7 +172,7 @@ export function Checker() {
           <ol className="im-howto">
             <li>Search and add the medications you take.</li>
             <li>We cross-check every pair against our interaction database.</li>
-            <li>You get a severity rating and a plain-language AI care plan.</li>
+            <li>You get a clinical-grade severity rating for each pair.</li>
           </ol>
         </Card>
       </div>
@@ -118,67 +181,125 @@ export function Checker() {
 }
 
 /* ============================ Interaction Result (HERO) ============================ */
-const worstOrder: Severity[] = ['major', 'moderate', 'minor', 'unknown']
+const SEV_RANK: Severity[] = ['major', 'moderate', 'minor', 'unknown']
+
+// Honest, generic guidance keyed only on severity tier (the dataset has no per-pair text).
+const SEV_GUIDANCE: Record<Severity, { do: string[]; avoid: string[] }> = {
+  major: {
+    do: ['Contact your doctor or pharmacist before taking these together', 'Watch closely for new or unusual symptoms'],
+    avoid: ['Don’t start or stop either medicine on your own', 'Don’t combine without professional advice'],
+  },
+  moderate: {
+    do: ['Mention this combination to your doctor or pharmacist', 'Monitor how you feel and report side effects'],
+    avoid: ['Don’t assume it’s safe long-term without review'],
+  },
+  minor: {
+    do: ['Usually manageable — follow your normal instructions', 'Ask your pharmacist if unsure'],
+    avoid: ['Don’t ignore persistent side effects'],
+  },
+  unknown: {
+    do: ['Evidence is limited — check with your doctor or pharmacist'],
+    avoid: ['Don’t treat “unknown” as “safe”'],
+  },
+}
+
 export function Result() {
   const selected = loadSelection()
-  const pairs: Interaction[] = []
-  for (let i = 0; i < selected.length; i++)
-    for (let j = i + 1; j < selected.length; j++) {
-      const it = findInteraction(selected[i], selected[j])
-      if (it) pairs.push(it)
-    }
-  const primary = pairs.sort((a, b) => worstOrder.indexOf(a.severity) - worstOrder.indexOf(b.severity))[0]
-  const worst: Severity = primary?.severity ?? 'minor'
-  const nameOf = (id: string) => DRUGS.find((d) => d.id === id)?.name ?? id
-  const pairLabel = primary ? `${nameOf(primary.a)} + ${nameOf(primary.b)}` : selected.map(nameOf).join(' + ')
+  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading')
+  const [data, setData] = useState<InteractionCheckResponse | null>(null)
+
+  useEffect(() => {
+    if (selected.length < 2) { setState('error'); return }
+    let alive = true
+    interactionApi.check(selected.map((d) => d.id))
+      .then((res) => { if (alive) { setData(res); setState('ok') } })
+      .catch(() => { if (alive) setState('error') })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const pairs = data?.interactions ?? []
+  const worst: Severity = toSeverity(data?.highestSeverity ?? 'unknown')
+  const none = state === 'ok' && pairs.length === 0
+  const guidance = SEV_GUIDANCE[worst]
 
   return (
     <Shell active="checker" title="Interaction result" sub="Based on the medications you selected">
       <a href="#/app/checker" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 14 }}>
         <IconArrowLeft width={16} height={16} /> Back to checker
       </a>
-      <div className="im-result">
-        <div className={`im-sevbanner im-sevbanner--${worst}`}>
-          <span className="im-sevbanner__ic"><IconAlert width={24} height={24} /></span>
-          <div>
-            <h2>{worst === 'minor' ? 'No significant interaction' : `${SEVERITY_LABEL[worst]} interaction`}</h2>
-            <div className="pair">{pairLabel}</div>
-          </div>
-          <span className="im-sevbanner__badge"><SeverityBadge level={worst} /></span>
-        </div>
 
-        <Card><p style={{ fontSize: 16, lineHeight: 1.6 }}>{primary?.summary ?? 'These medications are commonly taken together with no meaningful interaction.'}</p></Card>
+      {state === 'loading' && <Card><p style={{ margin: 0, color: 'var(--muted)' }}>Checking {selected.length} medications against the interaction database…</p></Card>}
 
-        <div className="im-plan">
-          <Card>
-            <div className="im-panel-title" style={{ color: '#0a8a63' }}>What to do</div>
-            <ul className="im-planlist im-planlist--do">
-              {(primary?.dos ?? ['Take as directed']).map((d) => (
-                <li key={d}><span className="m"><IconCheck width={13} height={13} /></span>{d}</li>
-              ))}
-            </ul>
-          </Card>
-          <Card>
-            <div className="im-panel-title" style={{ color: '#c92a2f' }}>What to avoid</div>
-            <ul className="im-planlist im-planlist--dont">
-              {(primary?.donts ?? ['No special precautions needed']).map((d) => (
-                <li key={d}><span className="m"><IconClose width={13} height={13} /></span>{d}</li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-
-        <Card style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button leftIcon={<IconMessage width={18} height={18} />}>Talk to your doctor</Button>
-          <Button variant="ghost">Save to history</Button>
-          <span className="im-legend" style={{ marginLeft: 'auto' }}>
-            <span><i style={{ background: 'var(--sev-major)' }} />Major</span>
-            <span><i style={{ background: 'var(--sev-moderate)' }} />Moderate</span>
-            <span><i style={{ background: 'var(--sev-minor)' }} />Safe</span>
-          </span>
+      {state === 'error' && (
+        <Card style={{ borderLeft: '4px solid var(--sev-moderate)' }}>
+          <div className="im-panel-title">Nothing to check</div>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>Add at least two medications on the checker, then try again.</p>
+          <div style={{ marginTop: 12 }}><a href="#/app/checker"><Button variant="soft">Back to checker</Button></a></div>
         </Card>
-        <p className="im-disclaimer">This tool provides general information and is not a substitute for professional medical advice. Always consult your doctor or pharmacist.</p>
-      </div>
+      )}
+
+      {state === 'ok' && (
+        <div className="im-result">
+          <div className={`im-sevbanner im-sevbanner--${none ? 'minor' : worst}`}>
+            <span className="im-sevbanner__ic"><IconAlert width={24} height={24} /></span>
+            <div>
+              <h2>{none ? 'No known interaction' : `${SEVERITY_LABEL[worst]} interaction`}</h2>
+              <div className="pair">{selected.map((d) => d.name).join(' + ')}</div>
+            </div>
+            {!none && <span className="im-sevbanner__badge"><SeverityBadge level={worst} /></span>}
+          </div>
+
+          <Card>
+            <p style={{ fontSize: 16, lineHeight: 1.6, margin: 0 }}>
+              {none
+                ? 'No interactions were found between the medications you selected in our database. This does not guarantee safety — always confirm with your doctor or pharmacist.'
+                : `We found ${pairs.length} interacting pair${pairs.length > 1 ? 's' : ''} among your medications. The highest severity is ${SEVERITY_LABEL[worst].toLowerCase()}.`}
+            </p>
+          </Card>
+
+          {!none && (
+            <Card>
+              <div className="im-panel-title">Interacting pairs</div>
+              {[...pairs]
+                .sort((a, b) => SEV_RANK.indexOf(toSeverity(a.severity)) - SEV_RANK.indexOf(toSeverity(b.severity)))
+                .map((p, i) => (
+                  <div className="im-listrow" key={i}>
+                    <span className="im-listrow__grow"><b>{p.drugA}</b> <small>+ {p.drugB}</small></span>
+                    <SeverityBadge level={toSeverity(p.severity)} />
+                  </div>
+                ))}
+            </Card>
+          )}
+
+          {!none && (
+            <div className="im-plan">
+              <Card>
+                <div className="im-panel-title" style={{ color: '#0a8a63' }}>What to do</div>
+                <ul className="im-planlist im-planlist--do">
+                  {guidance.do.map((d) => (<li key={d}><span className="m"><IconCheck width={13} height={13} /></span>{d}</li>))}
+                </ul>
+              </Card>
+              <Card>
+                <div className="im-panel-title" style={{ color: '#c92a2f' }}>What to avoid</div>
+                <ul className="im-planlist im-planlist--dont">
+                  {guidance.avoid.map((d) => (<li key={d}><span className="m"><IconClose width={13} height={13} /></span>{d}</li>))}
+                </ul>
+              </Card>
+            </div>
+          )}
+
+          <Card style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <a href="#/app/consultations"><Button leftIcon={<IconMessage width={18} height={18} />}>Talk to your doctor</Button></a>
+            <span className="im-legend" style={{ marginLeft: 'auto' }}>
+              <span><i style={{ background: 'var(--sev-major)' }} />Major</span>
+              <span><i style={{ background: 'var(--sev-moderate)' }} />Moderate</span>
+              <span><i style={{ background: 'var(--sev-minor)' }} />Minor</span>
+            </span>
+          </Card>
+          <p className="im-disclaimer">This tool provides general information and is not a substitute for professional medical advice. Always consult your doctor or pharmacist.</p>
+        </div>
+      )}
     </Shell>
   )
 }
@@ -188,9 +309,11 @@ const CLASSES = ['All', 'Cardiovascular', 'Antibiotics', 'Pain', 'Diabetes']
 export function Database() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('All')
-  const list = DRUGS.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
+  const { drugs, source } = useDrugs()
+  const list = drugs.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()))
   return (
-    <Shell active="database" title="Drug Database" sub="Browse medications and their known interactions">
+    <Shell active="database" title="Drug Database" sub="Browse medications and their known interactions"
+      actions={<span className={`im-tag`} style={{ background: source === 'live' ? 'var(--sev-minor-bg)' : 'var(--surface-2)', color: source === 'live' ? '#0a8a63' : 'var(--muted)' }}>{source === 'live' ? '● Live API' : source === 'loading' ? 'Loading…' : '○ Sample data'}</span>}>
       <div style={{ maxWidth: 460 }}><SearchField value={query} onChange={setQuery} placeholder="Search the database…" /></div>
       <div className="im-filterrow">
         {CLASSES.map((c) => (
@@ -199,7 +322,7 @@ export function Database() {
       </div>
       <div className="im-druglist">
         {list.map((d) => (
-          <a className="im-drugcard" key={d.id} href="#/app/drug">
+          <a className="im-drugcard" key={d.id} href={`#/app/drug?id=${d.id}`}>
             <span className="im-drugcard__ic"><IconPill width={22} height={22} /></span>
             <span className="im-drugcard__grow">
               <b>{d.name}</b><small>{d.generic}</small><br /><span className="im-tag">{d.drugClass}</span>
@@ -213,30 +336,82 @@ export function Database() {
 }
 
 /* ============================ Drug Detail ============================ */
-export function DrugDetail() {
-  const d = DRUGS[0] // Warfarin
+function DetailBlock({ title, text }: { title: string; text?: string | null }) {
+  if (!text || !text.trim()) return null
   return (
-    <Shell active="database" title={d.name} sub={`${d.generic} · ${d.drugClass}`}
+    <>
+      <div className="im-panel-title" style={{ marginTop: 16 }}>{title}</div>
+      <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{text}</p>
+    </>
+  )
+}
+
+export function DrugDetail() {
+  const id = hashParam('id')
+  const [drug, setDrug] = useState<Awaited<ReturnType<typeof drugApi.get>> | null>(null)
+  const [inter, setInter] = useState<DrugInteractionSummary[]>([])
+  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading')
+
+  useEffect(() => {
+    if (!id) { setState('error'); return }
+    let alive = true
+    Promise.all([drugApi.get(id), interactionApi.forDrug(id, 40).catch(() => [])])
+      .then(([d, ix]) => { if (alive) { setDrug(d); setInter(ix); setState('ok') } })
+      .catch(() => { if (alive) setState('error') })
+    return () => { alive = false }
+  }, [id])
+
+  if (state === 'loading') {
+    return <Shell active="database" title="Loading…" sub=""><Card><p style={{ margin: 0, color: 'var(--muted)' }}>Loading medication…</p></Card></Shell>
+  }
+  if (state === 'error' || !drug) {
+    return (
+      <Shell active="database" title="Medication not found" sub="">
+        <Card style={{ borderLeft: '4px solid var(--sev-moderate)' }}>
+          <p style={{ margin: 0, color: 'var(--muted)' }}>We couldn’t load this medication.</p>
+          <div style={{ marginTop: 12 }}><a href="#/app/database"><Button variant="soft">Back to database</Button></a></div>
+        </Card>
+      </Shell>
+    )
+  }
+
+  const name = drug.brandName || drug.genericName
+  const subParts = [drug.genericName, drug.categoryName || drug.dosageForm].filter(Boolean)
+
+  return (
+    <Shell active="database" title={name} sub={subParts.join(' · ')}
       actions={<Button variant="soft" leftIcon={<IconPlus width={18} height={18} />}>Add to my meds</Button>}>
       <a href="#/app/database" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 14 }}>
         <IconArrowLeft width={16} height={16} /> Back to database
       </a>
       <div className="im-cols-2">
         <Card>
-          <div className="im-panel-title">Known interactions</div>
-          <div className="im-listrow"><span className="im-listrow__grow"><b>Aspirin</b><small>Antiplatelet</small></span><SeverityBadge level="major" /></div>
-          <div className="im-listrow"><span className="im-listrow__grow"><b>Ibuprofen</b><small>NSAID</small></span><SeverityBadge level="moderate" /></div>
-          <div className="im-listrow"><span className="im-listrow__grow"><b>Vitamin D</b><small>Supplement</small></span><SeverityBadge level="minor" /></div>
+          <div className="im-panel-title">Known interactions {inter.length > 0 && <span className="im-tag">{inter.length}</span>}</div>
+          {inter.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>No interactions recorded for this medication.</p>}
+          {inter.map((x) => (
+            <a className="im-listrow" key={x.otherDrugId} href={`#/app/drug?id=${x.otherDrugId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span className="im-listrow__grow"><b>{x.otherDrugName}</b></span>
+              <SeverityBadge level={toSeverity(x.severity)} />
+            </a>
+          ))}
         </Card>
         <Card>
-          <div className="im-panel-title">Overview</div>
-          <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
-            Warfarin is an anticoagulant (“blood thinner”) used to prevent and treat blood clots. It requires regular INR monitoring and interacts with many drugs, foods and supplements.
-          </p>
-          <div className="im-panel-title" style={{ marginTop: 16 }}>Typical dosage</div>
-          <p style={{ fontSize: 14, color: 'var(--muted)' }}>2–10 mg once daily, individualised to INR target.</p>
-          <div className="im-panel-title" style={{ marginTop: 16 }}>Common warnings</div>
-          <p style={{ fontSize: 14, color: 'var(--muted)' }}>Bleeding risk. Avoid abrupt changes in vitamin-K intake.</p>
+          {(drug.description || drug.uses) ? (
+            <>
+              <DetailBlock title="Overview" text={drug.description || drug.uses} />
+              <DetailBlock title="Uses" text={drug.uses && drug.uses !== drug.description ? drug.uses : null} />
+            </>
+          ) : (
+            <>
+              <div className="im-panel-title">Overview</div>
+              <p style={{ fontSize: 14, color: 'var(--muted)' }}>No description on file for this medication.</p>
+            </>
+          )}
+          <DetailBlock title="Dosage" text={drug.dosage} />
+          <DetailBlock title="Side effects" text={drug.sideEffects} />
+          <DetailBlock title="Contraindications" text={drug.contraindications} />
+          <DetailBlock title="Pregnancy safety" text={drug.pregnancySafety} />
+          <DetailBlock title="Storage" text={drug.storage} />
         </Card>
       </div>
     </Shell>
@@ -245,98 +420,148 @@ export function DrugDetail() {
 
 /* ============================ Reminders ============================ */
 export function Reminders() {
-  const [taken, setTaken] = useState<Record<number, boolean>>(
-    Object.fromEntries(REMINDERS.map((r, i) => [i, r.taken])),
-  )
+  const [reminders, setReminders] = useState<ReminderResponse[] | null>(null)
+  const [taken, setTaken] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    let alive = true
+    reminderApi.list()
+      .then((r) => { if (alive) setReminders(r) })
+      .catch(() => { if (alive) setReminders([]) })
+    return () => { alive = false }
+  }, [])
+
   return (
     <Shell active="reminders" title="Reminders" sub="Stay on track with your daily doses"
       actions={<Button leftIcon={<IconPlus width={18} height={18} />}>Add reminder</Button>}>
-      <div className="im-cols-2">
-        <Card>
-          <div className="im-panel-title">Today</div>
-          {REMINDERS.map((r, i) => (
-            <div className="im-listrow" key={r.name}>
-              <span className="im-pillicon"><IconPill width={18} height={18} /></span>
-              <span className="im-listrow__grow"><b>{r.name}</b><small>{r.time}{r.note ? ` · ${r.note}` : ''}</small></span>
-              <button className={`im-check${taken[i] ? ' im-check--on' : ''}`} onClick={() => setTaken((t) => ({ ...t, [i]: !t[i] }))} aria-label="Mark taken">
-                {taken[i] && <IconCheck width={13} height={13} />}
-              </button>
-            </div>
-          ))}
-        </Card>
-        <Card>
-          <div className="im-panel-title">Adherence</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span className="tnum" style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-.03em' }}>92%</span>
-            <span style={{ color: 'var(--muted)', fontSize: 14 }}>this week</span>
+      <Card>
+        <div className="im-panel-title">Your reminders</div>
+        {!reminders && <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>Loading…</p>}
+        {reminders && reminders.length === 0 && (
+          <p style={{ color: 'var(--muted)', fontSize: 14, margin: '8px 0 0' }}>No reminders yet. Add one to get started.</p>
+        )}
+        {reminders?.map((r) => (
+          <div className="im-listrow" key={r.id}>
+            <span className="im-pillicon"><IconPill width={18} height={18} /></span>
+            <span className="im-listrow__grow">
+              <b>{r.drugName}</b>
+              <small>{r.reminderTime}{r.frequency ? ` · ${r.frequency}` : ''}{r.dosage ? ` · ${r.dosage}` : ''}</small>
+            </span>
+            <button className={`im-check${taken[r.id] ? ' im-check--on' : ''}`} onClick={() => setTaken((t) => ({ ...t, [r.id]: !t[r.id] }))} aria-label="Mark taken">
+              {taken[r.id] && <IconCheck width={13} height={13} />}
+            </button>
           </div>
-          <div className="im-mini" style={{ width: '100%', marginTop: 16 }}>
-            {[70, 100, 85, 100, 60, 100, 92].map((h, i) => <span key={i} style={{ height: `${h}%` }} />)}
-          </div>
-        </Card>
-      </div>
+        ))}
+      </Card>
     </Shell>
   )
 }
 
 /* ============================ Doctors ============================ */
 export function Doctors() {
+  const [doctors, setDoctors] = useState<DoctorResponse[] | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    doctorApi.verified()
+      .then((d) => { if (alive) setDoctors(d) })
+      .catch(() => { if (alive) setDoctors([]) })
+    return () => { alive = false }
+  }, [])
+
   return (
-    <Shell active="doctors" title="My doctors" sub="Your care team and upcoming visits"
-      actions={<Button leftIcon={<IconPlus width={18} height={18} />}>Add doctor</Button>}>
-      <div className="im-cols-2">
-        {DOCTORS.map((d) => (
-          <Card key={d.name} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Avatar initials={d.initials} size={52} />
-            <div style={{ flex: 1 }}>
-              <b style={{ fontSize: 16 }}>{d.name}</b>
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>{d.specialty}</div>
-              <div style={{ color: 'var(--text-brand)', fontSize: 12.5, marginTop: 4 }}>{d.next}</div>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="ghost" aria-label="Message"><IconMessage width={18} height={18} /></Button>
-              <Button variant="soft" aria-label="Call"><IconPhone width={18} height={18} /></Button>
-            </div>
-          </Card>
-        ))}
-      </div>
+    <Shell active="doctors" title="Doctors" sub="Verified professionals available to consult">
+      {!doctors && <Card><p style={{ margin: 0, color: 'var(--muted)' }}>Loading doctors…</p></Card>}
+      {doctors && doctors.length === 0 && (
+        <Card>
+          <div className="im-panel-title">No verified doctors yet</div>
+          <p style={{ color: 'var(--muted)', margin: '6px 0 0', fontSize: 14 }}>
+            Doctors appear here once an administrator approves their credentials.
+          </p>
+        </Card>
+      )}
+      {doctors && doctors.length > 0 && (
+        <div className="im-cols-2">
+          {doctors.map((d) => (
+            <Card key={d.id} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <Avatar initials={initialsFrom(d.fullName)} size={52} />
+              <div style={{ flex: 1 }}>
+                <b style={{ fontSize: 16 }}>Dr. {d.fullName}</b>
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{d.specialization}{d.hospital ? ` · ${d.hospital}` : ''}</div>
+                {d.experienceYears ? <div style={{ color: 'var(--text-brand)', fontSize: 12.5, marginTop: 4 }}>{d.experienceYears} yrs experience</div> : null}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <a href="#/app/consultations"><Button variant="soft" aria-label="Consult"><IconPhone width={18} height={18} /></Button></a>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </Shell>
   )
 }
 
 /* ============================ AI Assistant ============================ */
+type ChatMsg = { role: 'ai' | 'me'; text: string }
+
 export function Assistant() {
+  const { user } = useAuth()
   const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { role: 'ai', text: `Hi ${user?.name?.split(' ')[0] ?? 'there'} 👋 I can explain interactions, side effects and timing. What would you like to know?` },
+  ])
+
+  async function send(prompt?: string) {
+    const content = (prompt ?? text).trim()
+    if (!content || busy) return
+    setText('')
+    setMessages((m) => [...m, { role: 'me', text: content }])
+    setBusy(true)
+    try {
+      const res = await aiApi.explain(content)
+      setMessages((m) => [...m, { role: 'ai', text: res.explanation }])
+    } catch {
+      setMessages((m) => [...m, { role: 'ai', text: 'Sorry — I couldn’t reach the assistant just now. Please try again.' }])
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Shell active="assistant" title="IntelliMeds Assistant" sub="Ask about your medications — informational only">
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 18, minHeight: 460 }}>
         <div className="im-chat" style={{ flex: 1 }}>
-          <div className="im-bubble im-bubble--ai">Hi Sarah 👋 I can explain interactions, side effects and timing. What would you like to know?</div>
-          <div className="im-bubble im-bubble--me">Is it safe to take ibuprofen with my lisinopril?</div>
-          <div className="im-bubble im-bubble--ai">That pair is a <b>moderate</b> interaction — ibuprofen can reduce lisinopril’s effect and, used often, may affect the kidneys. For occasional pain, paracetamol is usually a safer choice. Always confirm with your doctor.</div>
+          {messages.map((m, i) => (
+            <div key={i} className={`im-bubble im-bubble--${m.role === 'ai' ? 'ai' : 'me'}`} style={{ whiteSpace: 'pre-line' }}>{m.text}</div>
+          ))}
+          {busy && <div className="im-bubble im-bubble--ai">Thinking…</div>}
         </div>
         <div className="im-promptchips">
-          <button onClick={() => setText('Explain my last result')}>Explain my last result</button>
-          <button onClick={() => setText('What are warfarin’s side effects?')}>Warfarin side effects</button>
+          <button onClick={() => send('What are the side effects of warfarin?')}>Warfarin side effects</button>
+          <button onClick={() => send('Is it safe to take ibuprofen with lisinopril?')}>Ibuprofen + lisinopril</button>
         </div>
-        <div className="im-chatinput">
+        <form className="im-chatinput" onSubmit={(e) => { e.preventDefault(); send() }}>
           <SearchField value={text} onChange={setText} placeholder="Message the assistant…" />
-          <button className="send" aria-label="Send"><IconSend width={20} height={20} /></button>
-        </div>
+          <button className="send" aria-label="Send" type="submit" disabled={busy}><IconSend width={20} height={20} /></button>
+        </form>
       </Card>
+      <p className="im-disclaimer">AI responses are informational only and not a substitute for professional medical advice.</p>
     </Shell>
   )
 }
 
 /* ============================ Profile ============================ */
 export function Profile() {
+  const { user, logout } = useAuth()
+  async function signOut() { await logout(); location.hash = '#/login' }
   return (
     <Shell active="profile" title="Profile" sub="Your account and health information">
       <Card style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-        <Avatar initials="SC" size={72} />
+        <Avatar initials={(user?.name ?? 'Sarah Chen').split(' ').map((s) => s[0]).slice(0, 2).join('')} size={72} />
         <div style={{ flex: 1 }}>
-          <b style={{ fontSize: 20 }}>Sarah Chen</b>
-          <div style={{ color: 'var(--muted)', fontSize: 14 }}>sarah.chen@email.com</div>
+          <b style={{ fontSize: 20 }}>{user?.name ?? 'Sarah Chen'}</b>
+          <div style={{ color: 'var(--muted)', fontSize: 14 }}>{user?.email ?? 'sarah.chen@email.com'}</div>
         </div>
         <Button variant="ghost">Edit profile</Button>
       </Card>
@@ -353,7 +578,7 @@ export function Profile() {
             <button><IconBell width={18} height={18} />Notifications<span className="im-nav__spacer" /><IconChevron width={16} height={16} /></button>
             <button><IconShield width={18} height={18} />Privacy<span className="im-nav__spacer" /><IconChevron width={16} height={16} /></button>
             <button><IconCalendar width={18} height={18} />Language<span className="im-nav__spacer" />English</button>
-            <button className="danger"><IconLogout width={18} height={18} />Sign out</button>
+            <button className="danger" onClick={signOut}><IconLogout width={18} height={18} />Sign out</button>
           </div>
         </Card>
       </div>

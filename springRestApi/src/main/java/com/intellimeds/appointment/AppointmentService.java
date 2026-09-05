@@ -23,12 +23,24 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
 
+    @Transactional(readOnly = true)
     public List<AppointmentResponse> getPatientAppointments(UUID patientId) {
         return appointmentRepository.findByPatientIdOrderByAppointmentDateDesc(patientId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /** Appointments for the doctor owned by the given user account. */
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getDoctorAppointmentsForUser(UUID userId) {
+        Doctor doctor = doctorRepository.findByProfileUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor", "user", userId));
+        return appointmentRepository.findByDoctorIdOrderByAppointmentDateDesc(doctor.getId()).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public AppointmentResponse getAppointmentById(UUID id) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", id));

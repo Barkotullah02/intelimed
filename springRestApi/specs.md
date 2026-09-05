@@ -1,5 +1,13 @@
 # IntelliMeds Project Specifications
 
+> 📋 **This is the original API specification.** For the up-to-date, cross-surface status
+> (backend / web / mobile) and the remaining to-do list, see
+> [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md). Notable additions since this spec:
+> doctor verification workflow, `/api/consultations` (WebRTC video/audio) + `/ws/signal`,
+> real interaction dataset queries (`/interactions/for-drug`), Gemini AI via `.env`, and a
+> seeded admin account. Some items marked "implemented" below are still partial (e.g. admin
+> dashboard metrics are stubbed) — the status doc is authoritative.
+
 ## Overview
 
 IntelliMeds is a comprehensive healthcare REST API built with Spring Boot, providing drug management, doctor consultations, AI-powered recommendations, medication reminders, and patient care features.

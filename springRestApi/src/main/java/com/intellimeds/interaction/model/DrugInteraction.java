@@ -9,7 +9,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "drug_interactions")
+@Table(name = "drug_interactions", indexes = {
+    @Index(name = "idx_drug_interactions_drug_a", columnList = "drug_a_id"),
+    @Index(name = "idx_drug_interactions_drug_b", columnList = "drug_b_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -46,6 +49,7 @@ public class DrugInteraction {
     public enum Severity {
         MAJOR,
         MODERATE,
-        MINOR
+        MINOR,
+        UNKNOWN
     }
 }

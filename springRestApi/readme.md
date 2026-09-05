@@ -13,18 +13,23 @@ A comprehensive healthcare REST API built with Spring Boot, featuring JWT authen
 - **Code Generation:** Lombok
 - **Build:** Maven
 
+> 📋 **Project status & leftovers:** see [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md) for the
+> full cross-surface picture (backend / web / mobile) and the to-do checklists.
+
 ## Features
 
-- **JWT Authentication** - Secure login, registration, refresh tokens
+- **JWT Authentication** - Secure login, registration, refresh tokens; registration refuses `ROLE_ADMIN` (admin is seeded)
 - **Role-Based Access Control** - Patient, Healthcare Professional, Admin
-- **Drug Management** - Complete drug catalog with search, categories, interactions, alternatives
-- **Doctor Consultations** - Doctor profiles, verification, appointment booking
-- **AI Integration** - Chat history, AI explanations, multiple AI providers (Gemini, OpenAI, Ollama, Offline)
+- **Drug Management** - Real 1,922-drug catalogue with search, interactions (155k+ pairs), alternatives
+- **Drug Interactions** - Check *between* selected drugs (real dataset, indexed); per-drug known interactions
+- **Doctor Verification** - Professional signup → `PENDING` application → admin approve/reject → public directory
+- **Video/Audio Consultations** - WebRTC peer-to-peer media + JWT-authenticated WebSocket signaling (`/ws/signal`)
+- **AI Integration** - Google Gemini via `.env` key (`AiService.explain`), with graceful offline fallback; provider switching (Gemini/OpenAI/Ollama/Offline)
 - **Medication Reminders** - Create, manage, and track medication schedules
 - **Patient Features** - Allergies, chronic diseases, emergency contacts
 - **Education Content** - PDFs, articles, videos for patient education
 - **Notifications** - Real-time notifications with read/unread status
-- **Admin Dashboard** - User management, reports, analytics
+- **Admin Dashboard** - User management, doctor verification, drug/interaction management (⚠️ dashboard metrics stubbed)
 
 ## Quick Start
 
@@ -193,7 +198,8 @@ src/main/java/com/intellimeds/
 ### Drug Interactions
 | Method | Endpoint           | Description  | Auth |
 | ------ | ------------------ | ------------ | ---- |
-| POST   | `/api/interactions/check` | Check interactions | Authenticated |
+| POST   | `/api/interactions/check` | Check interactions *between* the given `drugIds` | Authenticated |
+| GET    | `/api/interactions/for-drug/{drugId}?limit=` | Known interactions for one drug | Authenticated |
 | GET    | `/api/interactions/history` | Get history | Authenticated |
 | GET    | `/api/interactions/{id}` | Get interaction | Authenticated |
 
@@ -230,10 +236,25 @@ src/main/java/com/intellimeds/
 ### Doctors
 | Method | Endpoint           | Description  | Auth |
 | ------ | ------------------ | ------------ | ---- |
+| GET    | `/api/doctors/me` | Current professional's verification status/application | Healthcare Professional |
 | GET    | `/api/doctors` | Get all doctors | Authenticated |
 | GET    | `/api/doctors/{id}` | Get doctor | Authenticated |
-| GET    | `/api/doctors/verified` | Get verified doctors | Authenticated |
+| GET    | `/api/doctors/verified` | Get verified & available doctors | Authenticated |
 | GET    | `/api/doctors/search?keyword=` | Search doctors | Authenticated |
+
+> Note: a professional is created as a `PENDING` doctor application at registration
+> (requires `specialization` + `licenseNumber`); an admin must approve it (see Admin section)
+> before the doctor appears in `/verified`.
+
+### Consultations (video/audio, WebRTC)
+| Method | Endpoint           | Description  | Auth |
+| ------ | ------------------ | ------------ | ---- |
+| POST   | `/api/consultations` | Start a call (patient→`doctorId`, or doctor→`patientId`; `callType` VIDEO/AUDIO) | Participant |
+| GET    | `/api/consultations/mine` | List my consultations | Authenticated |
+| GET    | `/api/consultations/{id}` | Get a session (returns room + ICE config) | Participant |
+| POST   | `/api/consultations/{id}/join` | Join → marks ACTIVE | Participant |
+| POST   | `/api/consultations/{id}/end` | End → marks ENDED | Participant |
+| WS     | `/ws/signal?token=&room=` | WebRTC signaling relay (JWT-authenticated handshake) | Participant |
 
 ### Appointments
 | Method | Endpoint           | Description  | Auth |
@@ -280,7 +301,12 @@ src/main/java/com/intellimeds/
 | PATCH  | `/api/admin/users/{id}/status` | Update user status | Admin |
 | PUT    | `/api/admin/users/{id}` | Update user | Admin |
 | DELETE | `/api/admin/users/{id}` | Delete user | Admin |
-| GET    | `/api/admin/reports/dashboard` | Get dashboard | Admin |
+| GET    | `/api/admin/reports/dashboard` | Get dashboard (⚠️ metrics stubbed) | Admin |
+| GET    | `/api/admin/doctors?status=PENDING` | List doctor applications by status | Admin |
+| GET    | `/api/admin/doctors/{id}` | Get one doctor application | Admin |
+| PATCH  | `/api/admin/doctors/{id}/verification` | Approve/reject (`{"status":"APPROVED\|REJECTED"}`) | Admin |
+| GET    | `/api/admin/drugs` · POST · PUT · DELETE | Manage drugs | Admin |
+| GET    | `/api/admin/interactions` · POST · PUT · DELETE | Manage interactions (paginated) | Admin |
 
 ## Configuration
 
@@ -297,19 +323,49 @@ spring.datasource.password=<password>
 spring.datasource.hikari.maximum-pool-size=10
 
 # JPA / Hibernate
-spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.hibernate.ddl-auto=update
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.open-in-view=false
 
-# Flyway
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
+# Flyway (currently DISABLED — schema is managed by Hibernate ddl-auto during development)
+spring.flyway.enabled=false
 
 # JWT Configuration
 jwt.secret=<your-secret>
 jwt.expiration=86400000
 jwt.refresh-expiration=604800000
+
+# Seed admin (provisioned on startup if absent; override in production)
+app.admin.email=admin@intellimeds.com
+app.admin.password=ChangeMe!123
+app.admin.name=IntelliMeds Admin
+
+# Google Gemini AI (key comes from .env → GEMINI_API_KEY; blank = offline stub)
+gemini.api-key=${GEMINI_API_KEY:}
+gemini.api-url=https://generativelanguage.googleapis.com/v1beta/models
+gemini.model=gemini-2.0-flash
+
+# WebRTC consultations (media is peer-to-peer; server only relays signaling)
+webrtc.stun-urls=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
+webrtc.signaling-url=ws://localhost:8080/ws/signal
 ```
+
+### Secrets & the `.env` file
+
+Secrets live in `springRestApi/.env` (git-ignored) and are loaded into the JVM at startup
+by `DotenvLoader` (called from `main()`), then referenced via `${...}` placeholders:
+
+```
+GEMINI_API_KEY=REPLACE_WITH_YOUR_GEMINI_API_KEY
+```
+
+To enable real AI answers: put a valid Gemini key here (from
+https://aistudio.google.com/apikey) and restart. The `GEMINI` provider is selected by default;
+with no/invalid key the assistant degrades gracefully to an offline message. A real OS
+environment variable of the same name overrides the `.env` value.
+
+> ⚠️ The Supabase DB password is currently committed in `application.properties` (and thus in
+> git history). Rotate it and move it to `.env`/an env var before any real deployment.
 
 ## Response Format
 

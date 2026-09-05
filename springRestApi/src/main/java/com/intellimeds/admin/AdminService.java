@@ -2,7 +2,11 @@ package com.intellimeds.admin;
 
 import com.intellimeds.admin.dto.AdminUserResponse;
 import com.intellimeds.admin.dto.DashboardResponse;
+import com.intellimeds.ai.repository.AiHistoryRepository;
+import com.intellimeds.appointment.repository.AppointmentRepository;
+import com.intellimeds.drug.repository.DrugRepository;
 import com.intellimeds.exception.ResourceNotFoundException;
+import com.intellimeds.interaction.repository.DrugInteractionRepository;
 import com.intellimeds.model.User;
 import com.intellimeds.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,10 @@ import java.util.stream.Collectors;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final DrugRepository drugRepository;
+    private final DrugInteractionRepository interactionRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final AiHistoryRepository aiHistoryRepository;
 
     public List<AdminUserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -66,10 +74,10 @@ public class AdminService {
         return DashboardResponse.builder()
                 .totalUsers(totalUsers)
                 .activeUsers(activeUsers)
-                .totalDrugs(0L)
-                .totalInteractions(0L)
-                .totalAppointments(0L)
-                .totalAiRequests(0L)
+                .totalDrugs(drugRepository.count())
+                .totalInteractions(interactionRepository.count())
+                .totalAppointments(appointmentRepository.count())
+                .totalAiRequests(aiHistoryRepository.count())
                 .dailyRequests(java.util.Map.of())
                 .monthlyRequests(java.util.Map.of())
                 .build();

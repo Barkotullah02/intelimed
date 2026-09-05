@@ -53,6 +53,26 @@ public class InteractionService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<DrugInteractionSummary> getInteractionsForDrug(UUID drugId, int limit) {
+        var page = interactionRepository.findByDrugId(
+                drugId, org.springframework.data.domain.PageRequest.of(0, Math.min(Math.max(limit, 1), 200)));
+        return page.getContent().stream().map(di -> {
+            boolean aIsThis = di.getDrugA().getId().equals(drugId);
+            Drug other = aIsThis ? di.getDrugB() : di.getDrugA();
+            return DrugInteractionSummary.builder()
+                    .otherDrugId(other.getId())
+                    .otherDrugName(displayName(other))
+                    .severity(di.getSeverity().name())
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    private String displayName(Drug drug) {
+        return (drug.getBrandName() != null && !drug.getBrandName().isBlank())
+                ? drug.getBrandName() : drug.getGenericName();
+    }
+
     public List<InteractionHistoryResponse> getInteractionHistory(UUID userId) {
         return historyRepository.findByUserIdOrderByCheckedAtDesc(userId).stream()
                 .map(this::mapToHistoryResponse)
@@ -84,7 +104,10 @@ public class InteractionService {
         for (InteractionDetail detail : details) {
             if ("MODERATE".equals(detail.getSeverity())) return "MODERATE";
         }
-        return "MINOR";
+        for (InteractionDetail detail : details) {
+            if ("MINOR".equals(detail.getSeverity())) return "MINOR";
+        }
+        return "UNKNOWN";
     }
 
     private String buildResultSummary(List<InteractionDetail> details) {

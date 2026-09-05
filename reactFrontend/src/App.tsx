@@ -173,21 +173,7 @@ function RevealDiv({ children, className = '', delay = 0 }: {
 function Logo({ white = false }: { white?: boolean }) {
   return (
     <a href="#" className="nav-logo" style={white ? { color: '#fff' } : undefined}>
-      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-        <rect width="36" height="36" rx="10" fill="url(#logo-grad)" />
-        <path d="M18 8C18 8 12 14 12 20C12 23.3 14.7 26 18 26C21.3 26 24 23.3 24 20C24 14 18 8 18 8Z" fill="white" fillOpacity="0.9" />
-        <circle cx="18" cy="19" r="3" fill="url(#logo-grad2)" fillOpacity="0.8" />
-        <defs>
-          <linearGradient id="logo-grad" x1="0" y1="0" x2="36" y2="36">
-            <stop stopColor="#02c39a" />
-            <stop offset="1" stopColor="#028090" />
-          </linearGradient>
-          <linearGradient id="logo-grad2" x1="15" y1="16" x2="21" y2="22">
-            <stop stopColor="#02c39a" />
-            <stop offset="1" stopColor="#00a896" />
-          </linearGradient>
-        </defs>
-      </svg>
+      <img src="/logo.png" alt="IntelliMeds" width={40} height={40} style={{ objectFit: 'contain' }} />
       IntelliMeds
     </a>
   )
@@ -210,7 +196,8 @@ function Navbar() {
           <li><a href="#drug-check" onClick={() => setMobileOpen(false)}>Drug Check</a></li>
           <li><a href="#about" onClick={() => setMobileOpen(false)}>About</a></li>
           <li><a href="#contact" onClick={() => setMobileOpen(false)}>Contact</a></li>
-          <li><a href="#drug-check" className="nav-cta" onClick={() => setMobileOpen(false)}>Check Interactions</a></li>
+          <li><a href="#/login" onClick={() => setMobileOpen(false)}>Log in</a></li>
+          <li><a href="#/register" className="nav-cta" onClick={() => setMobileOpen(false)}>Sign up</a></li>
         </ul>
 
         <button

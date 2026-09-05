@@ -47,6 +47,17 @@ public class Doctor {
     @Builder.Default
     private Boolean verified = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false)
+    @Builder.Default
+    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+
+    @Column(name = "credential_document")
+    private String credentialDocument;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Column(name = "available")
     @Builder.Default
     private Boolean available = true;
@@ -54,4 +65,10 @@ public class Doctor {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public enum VerificationStatus {
+        PENDING,
+        APPROVED,
+        REJECTED
+    }
 }
