@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 
 /// Base URL of the Spring REST API.
@@ -27,14 +29,35 @@ class ApiClient {
   /// Exposed so the WebRTC signaling WebSocket can authenticate (`?token=`).
   String? get accessToken => _accessToken;
 
+  static const _kAccess = 'access_token';
+  static const _kRefresh = 'refresh_token';
+
   void setTokens(String access, String refresh) {
     _accessToken = access;
     _refreshToken = refresh;
+    // Persist so the session survives an app restart (fire-and-forget).
+    SharedPreferences.getInstance().then((p) {
+      p.setString(_kAccess, access);
+      p.setString(_kRefresh, refresh);
+    });
   }
 
   void clearTokens() {
     _accessToken = null;
     _refreshToken = null;
+    SharedPreferences.getInstance().then((p) {
+      p.remove(_kAccess);
+      p.remove(_kRefresh);
+    });
+  }
+
+  /// Load any persisted tokens into memory. Returns true if a token was restored,
+  /// meaning we can attempt to resume the previous session.
+  Future<bool> loadSession() async {
+    final p = await SharedPreferences.getInstance();
+    _accessToken = p.getString(_kAccess);
+    _refreshToken = p.getString(_kRefresh);
+    return _accessToken != null;
   }
 
   Map<String, String> get _headers => {
@@ -42,20 +65,26 @@ class ApiClient {
         if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
       };
 
+  /// Max time to wait for any single request. The AI endpoint can legitimately take
+  /// ~7-25s (Gemini), so this is generous — without it the app would hang forever.
+  static const Duration _timeout = Duration(seconds: 60);
+
   Future<dynamic> _send(String method, String path, {Object? body, bool retry = true}) async {
     final uri = Uri.parse('$baseUrl$path');
     late http.Response res;
     try {
       switch (method) {
         case 'POST':
-          res = await _http.post(uri, headers: _headers, body: body == null ? null : jsonEncode(body));
+          res = await _http.post(uri, headers: _headers, body: body == null ? null : jsonEncode(body)).timeout(_timeout);
         case 'PUT':
-          res = await _http.put(uri, headers: _headers, body: body == null ? null : jsonEncode(body));
+          res = await _http.put(uri, headers: _headers, body: body == null ? null : jsonEncode(body)).timeout(_timeout);
         case 'DELETE':
-          res = await _http.delete(uri, headers: _headers);
+          res = await _http.delete(uri, headers: _headers).timeout(_timeout);
         default:
-          res = await _http.get(uri, headers: _headers);
+          res = await _http.get(uri, headers: _headers).timeout(_timeout);
       }
+    } on TimeoutException {
+      throw ApiException('The server took too long to respond. Please try again.');
     } catch (e) {
       throw ApiException('Cannot reach the server. Is the API running?');
     }
@@ -187,12 +216,10 @@ class ApiClient {
     return (data as List).map((e) => ApiConsultation.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<ApiConsultation> createConsultation({String? doctorId, String? patientId, String callType = 'VIDEO'}) async {
-    final data = await _send('POST', '/consultations', body: {
-      if (doctorId != null) 'doctorId': doctorId,
-      if (patientId != null) 'patientId': patientId,
-      'callType': callType,
-    });
+  /// Open (or rejoin) the call for a CONFIRMED appointment once it's time.
+  /// This is the only way to start a consultation — no ad-hoc calling.
+  Future<ApiConsultation> joinAppointmentCall(String appointmentId) async {
+    final data = await _send('POST', '/consultations/appointments/$appointmentId/join');
     return ApiConsultation.fromJson(data as Map<String, dynamic>);
   }
 
@@ -258,6 +285,31 @@ class ApiClient {
     final data = await _send('GET', '/appointments/doctor');
     return (data as List).map((e) => ApiAppointment.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  /// Patient books a slot with a doctor. [appointmentDate] must be ISO-8601 (local).
+  Future<ApiAppointment> bookAppointment({
+    required String doctorId,
+    required String appointmentDate,
+    String callType = 'VIDEO',
+    String? reason,
+  }) async {
+    final data = await _send('POST', '/appointments', body: {
+      'doctorId': doctorId,
+      'appointmentDate': appointmentDate,
+      'callType': callType,
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return ApiAppointment.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<ApiAppointment> acceptAppointment(String id) async =>
+      ApiAppointment.fromJson(await _send('POST', '/appointments/$id/accept') as Map<String, dynamic>);
+
+  Future<ApiAppointment> declineAppointment(String id) async =>
+      ApiAppointment.fromJson(await _send('POST', '/appointments/$id/decline') as Map<String, dynamic>);
+
+  Future<ApiAppointment> cancelAppointment(String id) async =>
+      ApiAppointment.fromJson(await _send('POST', '/appointments/$id/cancel') as Map<String, dynamic>);
 
   // ---------------- Notifications ----------------
   Future<List<ApiNotification>> listNotifications() async {

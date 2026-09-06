@@ -30,6 +30,8 @@ class ApiUser {
         name: j['name'] as String? ?? '',
         role: j['role'] as String? ?? '',
       );
+
+  Map<String, dynamic> toJson() => {'id': id, 'email': email, 'name': name, 'role': role};
 }
 
 class ApiDrug {
@@ -214,24 +216,36 @@ class ApiChatHistory {
 }
 
 class ApiAppointment {
-  const ApiAppointment({required this.id, this.patientId, this.patientName, this.doctorName, this.doctorSpecialization, this.appointmentDate, this.status, this.reason});
+  const ApiAppointment({required this.id, this.patientId, this.patientName, this.doctorId, this.doctorName, this.doctorSpecialization, this.appointmentDate, this.status, this.callType, this.joinable = false, this.reason});
   final String id;
   final String? patientId;
   final String? patientName;
+  final String? doctorId;
   final String? doctorName;
   final String? doctorSpecialization;
   final String? appointmentDate;
   final String? status;
+  final String? callType;
+  /// Backend-computed: true when CONFIRMED and it's time to join.
+  final bool joinable;
   final String? reason;
+
+  bool get isVideo => (callType ?? 'VIDEO').toUpperCase() == 'VIDEO';
+  bool get isPending => status == 'PENDING';
+  bool get isConfirmed => status == 'CONFIRMED';
+  DateTime? get scheduledAt => appointmentDate == null ? null : DateTime.tryParse(appointmentDate!);
 
   factory ApiAppointment.fromJson(Map<String, dynamic> j) => ApiAppointment(
         id: j['id']?.toString() ?? '',
         patientId: j['patientId']?.toString(),
         patientName: j['patientName'] as String?,
+        doctorId: j['doctorId']?.toString(),
         doctorName: j['doctorName'] as String?,
         doctorSpecialization: j['doctorSpecialization'] as String?,
         appointmentDate: j['appointmentDate'] as String?,
         status: j['status'] as String?,
+        callType: j['callType'] as String?,
+        joinable: j['joinable'] as bool? ?? false,
         reason: j['reason'] as String?,
       );
 }

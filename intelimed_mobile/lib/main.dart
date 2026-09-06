@@ -41,16 +41,40 @@ class IntelliMedsApp extends StatelessWidget {
 }
 
 /// Shows the login screen until the user signs in (or continues as guest).
+/// While a persisted session is being restored on cold start, shows a splash.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final restoring = context.select<AuthProvider, bool>((a) => a.isRestoring);
+    if (restoring) return const _SplashScreen();
     final signedIn = context.select<AuthProvider, bool>((a) => a.isSignedIn);
     if (!signedIn) return const LoginScreen();
     // Healthcare professionals get the doctor experience; everyone else the patient app.
     final role = context.select<AuthProvider, String?>((a) => a.user?.role);
     return role == 'ROLE_HEALTHCARE_PROFESSIONAL' ? const DoctorShell() : const RootShell();
+  }
+}
+
+/// Brief loading screen shown while restoring a saved session on cold start.
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.medical_services_rounded, size: 56, color: AppColors.teal500),
+            SizedBox(height: 20),
+            SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

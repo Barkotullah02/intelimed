@@ -17,6 +17,9 @@ public interface ConsultationSessionRepository extends JpaRepository<Consultatio
 
     boolean existsByRoomCode(String roomCode);
 
+    /** The call session backing a given appointment, if one has been created yet. */
+    Optional<ConsultationSession> findByAppointmentId(UUID appointmentId);
+
     /** Every session the given user takes part in — either as the patient or as the doctor. */
     @Query("SELECT c FROM ConsultationSession c " +
            "WHERE c.patient.id = :userId OR c.doctor.profile.user.id = :userId " +

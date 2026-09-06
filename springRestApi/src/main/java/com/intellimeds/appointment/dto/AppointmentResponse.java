@@ -21,6 +21,9 @@ public class AppointmentResponse {
     private String doctorSpecialization;
     private LocalDateTime appointmentDate;
     private String status;
+    private String callType;
+    /** True when now is within the joinable window (CONFIRMED and at/after the scheduled time). */
+    private boolean joinable;
     private String reason;
     private String notes;
     private Double consultationFee;

@@ -21,6 +21,9 @@ public class CreateAppointmentRequest {
     @NotNull(message = "Appointment date is required")
     private LocalDateTime appointmentDate;
 
+    /** "VIDEO" (default) or "AUDIO". */
+    private String callType;
+
     private String reason;
     private String notes;
 }

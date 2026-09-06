@@ -2,7 +2,6 @@ package com.intellimeds.appointment;
 
 import com.intellimeds.appointment.dto.AppointmentResponse;
 import com.intellimeds.appointment.dto.CreateAppointmentRequest;
-import com.intellimeds.appointment.model.Appointment;
 import com.intellimeds.dto.ApiResponse;
 import com.intellimeds.model.User;
 import com.intellimeds.repository.UserRepository;
@@ -55,12 +54,25 @@ public class AppointmentController {
         return ResponseEntity.ok(ApiResponse.success("Appointment created successfully", appointment));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<AppointmentResponse>> updateAppointment(
-            @PathVariable UUID id,
-            @RequestParam Appointment.AppointmentStatus status) {
-        AppointmentResponse appointment = appointmentService.updateAppointment(id, status);
-        return ResponseEntity.ok(ApiResponse.success("Appointment updated successfully", appointment));
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> acceptAppointment(
+            @PathVariable UUID id, Authentication authentication) {
+        AppointmentResponse appointment = appointmentService.accept(id, getUserFromAuth(authentication));
+        return ResponseEntity.ok(ApiResponse.success("Appointment accepted", appointment));
+    }
+
+    @PostMapping("/{id}/decline")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> declineAppointment(
+            @PathVariable UUID id, Authentication authentication) {
+        AppointmentResponse appointment = appointmentService.decline(id, getUserFromAuth(authentication));
+        return ResponseEntity.ok(ApiResponse.success("Appointment declined", appointment));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> cancelAppointment(
+            @PathVariable UUID id, Authentication authentication) {
+        AppointmentResponse appointment = appointmentService.cancel(id, getUserFromAuth(authentication));
+        return ResponseEntity.ok(ApiResponse.success("Appointment cancelled", appointment));
     }
 
     @DeleteMapping("/{id}")

@@ -3,11 +3,8 @@ package com.intellimeds.consultation;
 import com.intellimeds.appointment.model.Appointment;
 import com.intellimeds.appointment.repository.AppointmentRepository;
 import com.intellimeds.consultation.dto.ConsultationResponse;
-import com.intellimeds.consultation.dto.CreateConsultationRequest;
 import com.intellimeds.consultation.model.ConsultationSession;
 import com.intellimeds.consultation.repository.ConsultationSessionRepository;
-import com.intellimeds.doctor.model.Doctor;
-import com.intellimeds.doctor.repository.DoctorRepository;
 import com.intellimeds.exception.ResourceNotFoundException;
 import com.intellimeds.model.User;
 import com.intellimeds.repository.UserRepository;
@@ -29,7 +26,6 @@ public class ConsultationService {
 
     private final ConsultationSessionRepository sessionRepository;
     private final UserRepository userRepository;
-    private final DoctorRepository doctorRepository;
     private final AppointmentRepository appointmentRepository;
 
     @Value("${webrtc.stun-urls:stun:stun.l.google.com:19302}")
@@ -43,53 +39,56 @@ public class ConsultationService {
     @Value("${webrtc.signaling-url:ws://localhost:8080/ws/signal}")
     private String signalingUrl;
 
+    /** How early (minutes before the scheduled time) a confirmed call may be joined. */
+    private static final long JOIN_GRACE_MINUTES = 5;
+
+    /**
+     * Start (or rejoin) the call for a CONFIRMED appointment, once it is time. This is the ONLY
+     * way to open a consultation — there is no ad-hoc "call a doctor now" path. Either participant
+     * (patient or the appointment's doctor) may call it; the first call creates the shared room,
+     * later calls return the same room so both sides meet.
+     */
     @Transactional
-    public ConsultationResponse create(CreateConsultationRequest request, String callerEmail) {
+    public ConsultationResponse startFromAppointment(UUID appointmentId, String callerEmail) {
         User caller = requireUser(callerEmail);
+        Appointment appt = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", appointmentId));
 
-        User patient;
-        Doctor doctor;
-
-        if (request.getDoctorId() != null) {
-            // Patient-initiated: caller is the patient, calling the given doctor.
-            doctor = doctorRepository.findById(request.getDoctorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Doctor", "id", request.getDoctorId()));
-            patient = caller;
-        } else if (request.getPatientId() != null) {
-            // Doctor-initiated: caller must own a doctor profile, calling the given patient.
-            doctor = doctorRepository.findByProfileUserId(caller.getId())
-                    .orElseThrow(() -> new IllegalStateException("Only a doctor can start a consultation with a patient"));
-            patient = userRepository.findById(request.getPatientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getPatientId()));
-        } else {
-            throw new IllegalArgumentException("Provide either doctorId (patient calling) or patientId (doctor calling)");
+        boolean isPatient = appt.getPatient().getId().equals(caller.getId());
+        boolean isDoctor = appt.getDoctor().getProfile().getUser().getId().equals(caller.getId());
+        if (!isPatient && !isDoctor) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "You are not part of this appointment");
+        }
+        if (appt.getStatus() != Appointment.AppointmentStatus.CONFIRMED
+                && appt.getStatus() != Appointment.AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("This appointment has not been accepted by the doctor yet");
+        }
+        if (LocalDateTime.now().isBefore(appt.getAppointmentDate().minusMinutes(JOIN_GRACE_MINUTES))) {
+            throw new IllegalStateException("This consultation opens at the scheduled time (" + appt.getAppointmentDate() + ")");
         }
 
-        if (Boolean.FALSE.equals(doctor.getVerified())) {
-            throw new IllegalStateException("This doctor is not verified for consultations yet");
+        // One shared session per appointment: create on the first join, reuse thereafter.
+        ConsultationSession session = sessionRepository.findByAppointmentId(appointmentId)
+                .orElseGet(() -> sessionRepository.save(ConsultationSession.builder()
+                        .roomCode(generateRoomCode())
+                        .patient(appt.getPatient())
+                        .doctor(appt.getDoctor())
+                        .appointment(appt)
+                        .callType(appt.getCallType() == null
+                                ? ConsultationSession.CallType.VIDEO
+                                : ConsultationSession.CallType.valueOf(appt.getCallType().name()))
+                        .status(ConsultationSession.Status.SCHEDULED)
+                        .build()));
+
+        if (session.getStatus() != ConsultationSession.Status.ACTIVE
+                && session.getStatus() != ConsultationSession.Status.CANCELLED) {
+            session.setStatus(ConsultationSession.Status.ACTIVE);
+            if (session.getStartedAt() == null) session.setStartedAt(LocalDateTime.now());
+            session.setEndedAt(null);
+            sessionRepository.save(session);
         }
-        if (doctor.getProfile().getUser().getId().equals(patient.getId())) {
-            throw new IllegalArgumentException("You cannot start a consultation with yourself");
-        }
-
-        ConsultationSession.CallType callType = parseCallType(request.getCallType());
-
-        Appointment appointment = null;
-        if (request.getAppointmentId() != null) {
-            appointment = appointmentRepository.findById(request.getAppointmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Appointment", "id", request.getAppointmentId()));
-        }
-
-        ConsultationSession session = ConsultationSession.builder()
-                .roomCode(generateRoomCode())
-                .patient(patient)
-                .doctor(doctor)
-                .appointment(appointment)
-                .callType(callType)
-                .status(ConsultationSession.Status.SCHEDULED)
-                .build();
-
-        return toResponse(sessionRepository.save(session), caller.getId());
+        return toResponse(session, caller.getId());
     }
 
     public List<ConsultationResponse> listMine(String callerEmail) {
@@ -132,6 +131,12 @@ public class ConsultationService {
             session.setStatus(ConsultationSession.Status.ENDED);
             session.setEndedAt(LocalDateTime.now());
             sessionRepository.save(session);
+            // Mark the backing appointment as completed so it leaves the "upcoming" list.
+            Appointment appt = session.getAppointment();
+            if (appt != null && appt.getStatus() == Appointment.AppointmentStatus.CONFIRMED) {
+                appt.setStatus(Appointment.AppointmentStatus.COMPLETED);
+                appointmentRepository.save(appt);
+            }
         }
         return toResponse(session, caller.getId());
     }
@@ -156,15 +161,6 @@ public class ConsultationService {
     private boolean isParticipant(ConsultationSession session, UUID userId) {
         return session.getPatient().getId().equals(userId)
                 || session.getDoctor().getProfile().getUser().getId().equals(userId);
-    }
-
-    private ConsultationSession.CallType parseCallType(String value) {
-        if (value == null || value.isBlank()) return ConsultationSession.CallType.VIDEO;
-        try {
-            return ConsultationSession.CallType.valueOf(value.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid callType '" + value + "'. Allowed: VIDEO, AUDIO");
-        }
     }
 
     private String generateRoomCode() {

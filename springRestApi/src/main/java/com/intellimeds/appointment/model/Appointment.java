@@ -39,6 +39,12 @@ public class Appointment {
     @Builder.Default
     private AppointmentStatus status = AppointmentStatus.PENDING;
 
+    /** Requested consultation modality for this booking. */
+    @Column(name = "call_type")
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private CallType callType = CallType.VIDEO;
+
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
@@ -57,10 +63,13 @@ public class Appointment {
     private LocalDateTime updatedAt;
 
     public enum AppointmentStatus {
-        PENDING,
-        CONFIRMED,
-        CANCELLED,
-        COMPLETED,
+        PENDING,    // patient booked, awaiting the doctor's decision
+        CONFIRMED,  // doctor accepted — joinable at the scheduled time
+        DECLINED,   // doctor declined the request
+        CANCELLED,  // cancelled by patient (or doctor) before it happened
+        COMPLETED,  // the consultation took place
         NO_SHOW
     }
+
+    public enum CallType { VIDEO, AUDIO }
 }

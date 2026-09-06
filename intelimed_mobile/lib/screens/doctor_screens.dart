@@ -63,8 +63,7 @@ class _DoctorShellState extends State<DoctorShell> {
   static const _pages = [
     DoctorDashboardScreen(),
     DoctorPatientsScreen(),
-    ConsultationsScreen(doctor: true),
-    DoctorAppointmentsScreen(),
+    AppointmentsScreen(doctor: true),
     ProfileScreen(),
   ];
 
@@ -81,8 +80,7 @@ class _DoctorShellState extends State<DoctorShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.people_alt_rounded), label: 'Patients'),
-          NavigationDestination(icon: Icon(Icons.call_rounded), label: 'Calls'),
-          NavigationDestination(icon: Icon(Icons.event_rounded), label: 'Appts'),
+          NavigationDestination(icon: Icon(Icons.event_rounded), label: 'Appointments'),
           NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
         ],
       ),
@@ -333,63 +331,3 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   }
 }
 
-/* ============================ Appointments ============================ */
-class DoctorAppointmentsScreen extends StatefulWidget {
-  const DoctorAppointmentsScreen({super.key});
-  @override
-  State<DoctorAppointmentsScreen> createState() => _DoctorAppointmentsScreenState();
-}
-
-class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
-  List<ApiAppointment>? _appts;
-
-  @override
-  void initState() {
-    super.initState();
-    _safeList(context.read<ApiClient>().listDoctorAppointments()).then((a) { if (mounted) setState(() => _appts = a); });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appts = _appts;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 120),
-      children: [
-        Text('Appointments', style: AppText.h1),
-        const SizedBox(height: 4),
-        Text('Your scheduled consultations', style: AppText.bodyMuted),
-        const SizedBox(height: 16),
-        if (appts == null)
-          const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
-        else if (appts.isEmpty)
-          SectionCard(child: Text('No appointments scheduled.', style: AppText.bodyMuted))
-        else
-          for (final a in appts) ...[
-            SectionCard(
-              child: Row(
-                children: [
-                  const PillIcon(icon: Icons.event),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(a.patientName ?? 'Patient', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                        Text('${_fmt(a.appointmentDate)}${a.reason != null ? ' · ${a.reason}' : ''}', style: AppText.caption),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.teal50, borderRadius: BorderRadius.circular(AppRadius.pill)),
-                    child: Text(a.status ?? '—', style: const TextStyle(color: AppColors.teal700, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-      ],
-    );
-  }
-}

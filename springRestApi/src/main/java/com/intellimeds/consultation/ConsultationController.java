@@ -1,7 +1,6 @@
 package com.intellimeds.consultation;
 
 import com.intellimeds.consultation.dto.ConsultationResponse;
-import com.intellimeds.consultation.dto.CreateConsultationRequest;
 import com.intellimeds.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +17,15 @@ public class ConsultationController {
 
     private final ConsultationService consultationService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ConsultationResponse>> create(
-            @RequestBody CreateConsultationRequest request, Authentication auth) {
-        ConsultationResponse res = consultationService.create(request, auth.getName());
-        return ResponseEntity.ok(ApiResponse.success("Consultation created", res));
+    /**
+     * Open (or rejoin) the call for a CONFIRMED appointment once it is time. This replaces the
+     * old ad-hoc "call a doctor now" endpoint — a consultation can only come from an accepted booking.
+     */
+    @PostMapping("/appointments/{appointmentId}/join")
+    public ResponseEntity<ApiResponse<ConsultationResponse>> joinByAppointment(
+            @PathVariable UUID appointmentId, Authentication auth) {
+        ConsultationResponse res = consultationService.startFromAppointment(appointmentId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Consultation ready", res));
     }
 
     @GetMapping("/mine")

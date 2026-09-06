@@ -5,7 +5,7 @@ import '../api/models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'consultations_screen.dart';
-import 'call_screen.dart';
+import 'book_appointment_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -37,15 +37,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   String _initials(String name) => name.trim().split(' ').map((s) => s.isEmpty ? '' : s[0]).take(2).join();
 
-  Future<void> _startCall(ApiDoctor d) async {
-    try {
-      final api = context.read<ApiClient>();
-      final consult = await api.createConsultation(doctorId: d.id, callType: 'VIDEO');
-      if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallScreen(consultation: consult)));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not start the call: $e')));
-    }
+  Future<void> _book(ApiDoctor d) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BookAppointmentScreen(doctor: d)));
   }
 
   @override
@@ -57,9 +50,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
           children: [
             Expanded(child: Text('My doctors', style: AppText.h1)),
             TextButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConsultationsScreen())),
-              icon: const Icon(Icons.call, size: 18, color: AppColors.teal700),
-              label: const Text('Calls', style: TextStyle(color: AppColors.teal700, fontWeight: FontWeight.w600)),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AppointmentsScreen())),
+              icon: const Icon(Icons.event_note, size: 18, color: AppColors.teal700),
+              label: const Text('My appointments', style: TextStyle(color: AppColors.teal700, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -98,9 +91,17 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       ],
                     ),
                   ),
-                  _RoundAction(icon: Icons.chat_bubble_outline, onTap: () {}),
-                  const SizedBox(width: 8),
-                  _RoundAction(icon: Icons.videocam_outlined, filled: true, onTap: () => _startCall(d)),
+                  TextButton.icon(
+                    onPressed: () => _book(d),
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.teal50,
+                      foregroundColor: AppColors.teal700,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.event_available, size: 18),
+                    label: const Text('Book', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
                 ],
               ),
             ),
@@ -111,26 +112,3 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   }
 }
 
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({required this.icon, required this.onTap, this.filled = false});
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkResponse(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: filled ? AppColors.teal50 : Colors.transparent,
-          shape: BoxShape.circle,
-          border: filled ? null : Border.all(color: AppColors.line, width: 1.5),
-        ),
-        child: Icon(icon, size: 18, color: filled ? AppColors.teal700 : AppColors.ink),
-      ),
-    );
-  }
-}

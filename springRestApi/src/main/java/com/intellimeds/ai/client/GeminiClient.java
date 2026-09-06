@@ -83,7 +83,7 @@ public class GeminiClient {
                 )),
                 "generationConfig", Map.of(
                         "temperature", 0.4,
-                        "maxOutputTokens", 800
+                        "maxOutputTokens", 500
                 )
         );
 
