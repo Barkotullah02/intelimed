@@ -1,5 +1,13 @@
 // Models mirrored from the Spring REST API DTOs.
 
+/// The backend serializes timestamps as naive ISO strings in UTC. Parse such a
+/// value as UTC and return it in the device's local time (null-safe).
+DateTime? parseUtcToLocal(String? iso) {
+  if (iso == null || iso.isEmpty) return null;
+  final s = iso.endsWith('Z') ? iso : '${iso}Z';
+  return DateTime.tryParse(s)?.toLocal();
+}
+
 class ApiAuth {
   const ApiAuth({required this.accessToken, required this.refreshToken, required this.email, required this.name, required this.role});
   final String accessToken;
@@ -233,7 +241,8 @@ class ApiAppointment {
   bool get isVideo => (callType ?? 'VIDEO').toUpperCase() == 'VIDEO';
   bool get isPending => status == 'PENDING';
   bool get isConfirmed => status == 'CONFIRMED';
-  DateTime? get scheduledAt => appointmentDate == null ? null : DateTime.tryParse(appointmentDate!);
+  /// Server stores times in UTC (naive). Parse as UTC and convert to device-local.
+  DateTime? get scheduledAt => parseUtcToLocal(appointmentDate);
 
   factory ApiAppointment.fromJson(Map<String, dynamic> j) => ApiAppointment(
         id: j['id']?.toString() ?? '',

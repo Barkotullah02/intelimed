@@ -15,16 +15,14 @@ Future<List<T>> _safeList<T>(Future<List<T>> f) async {
 }
 
 bool _isToday(String? iso) {
-  if (iso == null) return false;
-  final d = DateTime.tryParse(iso);
+  final d = parseUtcToLocal(iso);
   if (d == null) return false;
   final n = DateTime.now();
   return d.year == n.year && d.month == n.month && d.day == n.day;
 }
 
 String _fmt(String? iso) {
-  if (iso == null) return '—';
-  final d = DateTime.tryParse(iso);
+  final d = parseUtcToLocal(iso);
   if (d == null) return '—';
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   final h = d.hour.toString().padLeft(2, '0');

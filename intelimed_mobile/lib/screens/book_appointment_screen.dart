@@ -49,7 +49,10 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (t != null) setState(() => _time = t);
   }
 
-  String _iso(DateTime d) {
+  /// Format as a naive ISO string in UTC. The backend stores/compares appointment
+  /// times in UTC, so we convert the user's local selection before sending.
+  String _iso(DateTime local) {
+    final d = local.toUtc();
     two(int n) => n.toString().padLeft(2, '0');
     return '${d.year}-${two(d.month)}-${two(d.day)}T${two(d.hour)}:${two(d.minute)}:00';
   }
