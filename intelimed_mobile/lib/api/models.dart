@@ -351,6 +351,54 @@ class ApiNotification {
       );
 }
 
+class ApiPrescriptionItem {
+  const ApiPrescriptionItem({required this.medicine, this.dosage, this.frequency, this.duration, this.instructions});
+  final String medicine;
+  final String? dosage;
+  final String? frequency;
+  final String? duration;
+  final String? instructions;
+
+  factory ApiPrescriptionItem.fromJson(Map<String, dynamic> j) => ApiPrescriptionItem(
+        medicine: j['medicine'] as String? ?? '',
+        dosage: j['dosage'] as String?,
+        frequency: j['frequency'] as String?,
+        duration: j['duration'] as String?,
+        instructions: j['instructions'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'medicine': medicine,
+        if (dosage != null) 'dosage': dosage,
+        if (frequency != null) 'frequency': frequency,
+        if (duration != null) 'duration': duration,
+        if (instructions != null) 'instructions': instructions,
+      };
+}
+
+class ApiPrescription {
+  const ApiPrescription({required this.id, required this.consultationId, this.doctorName, this.patientName, this.advice, this.items = const [], this.updatedAt});
+  final String id;
+  final String consultationId;
+  final String? doctorName;
+  final String? patientName;
+  final String? advice;
+  final List<ApiPrescriptionItem> items;
+  final String? updatedAt;
+
+  DateTime? get updatedLocal => parseUtcToLocal(updatedAt);
+
+  factory ApiPrescription.fromJson(Map<String, dynamic> j) => ApiPrescription(
+        id: j['id']?.toString() ?? '',
+        consultationId: j['consultationId']?.toString() ?? '',
+        doctorName: j['doctorName'] as String?,
+        patientName: j['patientName'] as String?,
+        advice: j['advice'] as String?,
+        items: (j['items'] as List?)?.map((e) => ApiPrescriptionItem.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
+        updatedAt: j['updatedAt'] as String?,
+      );
+}
+
 /// Thrown when the API returns a non-success envelope or a transport error.
 class ApiException implements Exception {
   const ApiException(this.message);

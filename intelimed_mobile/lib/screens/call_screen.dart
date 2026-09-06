@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../api/api_client.dart';
 import '../api/models.dart';
 import '../theme.dart';
+import 'prescription_screens.dart';
 
 /// 1:1 WebRTC video/audio call. Media is peer-to-peer; the backend only relays
 /// SDP/ICE signaling over the /ws/signal WebSocket. Mirrors the web call screen.
@@ -34,6 +35,9 @@ class _CallScreenState extends State<CallScreen> {
   bool _remoteDescSet = false;
   final List<RTCIceCandidate> _pendingIce = [];
   bool _disposed = false;
+
+  ApiPrescription? _rx;      // current prescription for this consultation
+  bool _rxAutoShown = false; // patient: only auto-open the sheet once
 
   ApiConsultation get c => widget.consultation;
 
@@ -105,6 +109,7 @@ class _CallScreenState extends State<CallScreen> {
       };
 
       _openSocket(token: api.accessToken ?? '', room: session.roomCode);
+      _loadRx(); // pick up any prescription already written (e.g. on rejoin)
       if (mounted) setState(() => _phase = _Phase.waiting);
     } catch (e) {
       _setPhase(_Phase.error, note: 'Could not join this consultation.');
@@ -163,7 +168,40 @@ class _CallScreenState extends State<CallScreen> {
       case 'peer-left':
         _setNote('The other participant left the call.');
         break;
+      case 'prescription': // the doctor just saved one — fetch and show it live
+        _loadRx(popupForPatient: true);
+        break;
     }
+  }
+
+  Future<void> _loadRx({bool popupForPatient = false}) async {
+    try {
+      final rx = await context.read<ApiClient>().getPrescription(c.id);
+      if (!mounted || rx == null) return;
+      setState(() => _rx = rx);
+      if (popupForPatient && !c.selfIsDoctor && !_rxAutoShown) {
+        _rxAutoShown = true;
+        showPrescriptionView(context, rx);
+      }
+    } catch (_) {/* ignore — the Rx button still lets them open it */}
+  }
+
+  Future<void> _prescribe() async {
+    final draft = await showPrescribeSheet(context, _rx);
+    if (draft == null || !mounted) return;
+    try {
+      final saved = await context.read<ApiClient>().savePrescription(c.id, advice: draft.advice, items: draft.items);
+      if (!mounted) return;
+      setState(() => _rx = saved);
+      _sendSignal({'type': 'prescription'}); // nudge the patient to fetch it live
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prescription sent to the patient')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save prescription: $e')));
+    }
+  }
+
+  void _viewRx() {
+    if (_rx != null) showPrescriptionView(context, _rx!);
   }
 
   Future<void> _flushIce() async {
@@ -270,6 +308,17 @@ class _CallScreenState extends State<CallScreen> {
             ),
             if (_note.isNotEmpty && _phase == _Phase.connected)
               Positioned(left: 16, right: 16, top: 44, child: Text(_note, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFCFE6E1), fontSize: 12))),
+            // Prescription control: doctor writes; patient views once one exists.
+            if (c.selfIsDoctor || _rx != null)
+              Positioned(
+                left: 12, top: 8,
+                child: _RxButton(
+                  label: c.selfIsDoctor ? 'Prescribe' : 'Prescription',
+                  icon: Icons.medication_outlined,
+                  highlight: !c.selfIsDoctor && _rx != null,
+                  onTap: c.selfIsDoctor ? _prescribe : _viewRx,
+                ),
+              ),
             // Controls
             Positioned(
               left: 0, right: 0, bottom: 24,
@@ -287,6 +336,41 @@ class _CallScreenState extends State<CallScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RxButton extends StatelessWidget {
+  const _RxButton({required this.label, required this.icon, required this.onTap, this.highlight = false});
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: highlight ? AppColors.teal500 : Colors.white24,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white38),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 7),
+              Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+            ],
+          ),
         ),
       ),
     );

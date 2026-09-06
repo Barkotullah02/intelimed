@@ -5,6 +5,7 @@ import '../api/models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'call_screen.dart';
+import 'prescription_screens.dart';
 
 String _fmtWhen(DateTime? d) {
   if (d == null) return '—';
@@ -75,7 +76,20 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Widget build(BuildContext context) {
     final appts = _appts;
     return Scaffold(
-      appBar: widget.doctor ? null : AppBar(title: const Text('My appointments'), backgroundColor: AppColors.paper, surfaceTintColor: Colors.transparent),
+      appBar: widget.doctor
+          ? null
+          : AppBar(
+              title: const Text('My appointments'),
+              backgroundColor: AppColors.paper,
+              surfaceTintColor: Colors.transparent,
+              actions: [
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrescriptionsScreen())),
+                  icon: const Icon(Icons.medication_outlined, size: 18, color: AppColors.teal700),
+                  label: const Text('Prescriptions', style: TextStyle(color: AppColors.teal700, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

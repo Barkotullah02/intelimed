@@ -233,6 +233,29 @@ class ApiClient {
     return ApiConsultation.fromJson(data as Map<String, dynamic>);
   }
 
+  // ---------------- Prescriptions ----------------
+  /// Doctor writes/updates the prescription for a consultation.
+  Future<ApiPrescription> savePrescription(String consultationId, {String? advice, required List<ApiPrescriptionItem> items}) async {
+    final data = await _send('PUT', '/consultations/$consultationId/prescription', body: {
+      if (advice != null) 'advice': advice,
+      'items': items.map((e) => e.toJson()).toList(),
+    });
+    return ApiPrescription.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Read a consultation's prescription. Returns null if none has been written yet.
+  Future<ApiPrescription?> getPrescription(String consultationId) async {
+    final data = await _send('GET', '/consultations/$consultationId/prescription');
+    if (data == null) return null;
+    return ApiPrescription.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// All prescriptions written for the signed-in patient.
+  Future<List<ApiPrescription>> listMyPrescriptions() async {
+    final data = await _send('GET', '/prescriptions/mine');
+    return (data as List).map((e) => ApiPrescription.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   // ---------------- Reminders ----------------
   Future<List<ApiReminder>> listReminders() async {
     final data = await _send('GET', '/reminders');
